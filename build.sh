@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+
+#
+# Copyright (C) 2025 Akash Yadav
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
+set -eu
+
+script=$(realpath "$0")
+script_dir=$(dirname "$script")
+
+# shellcheck source=utils.sh
+. "$script_dir/utils.sh"
+
+TERMUX_PACKAGES_VERSION="bootstrap-2025.04.13-r1+apt.android-7"
+TERMUX_PACKAGES_REPO="https://github.com/termux/termux-packages"
+TERMUX_PACKAGES_DIR="$script_dir/termux-packages"
+TERMUX_PACKAGE_NAME="com.termux"
+
+SCRIBE_PACKAGE_NAME="com.scribe"
+
+# Configure build environment variables
+TERMUX_SCRIPTDIR="$TERMUX_PACKAGES_DIR"
+export TERMUX_SCRIPTDIR
+
+TERMUX_PKG_API_LEVEL=28
+export TERMUX_PKG_API_LEVEL
+
+# Script configuration
+ALL_ARCHS=" aarch64 arm i686 x86_64 "
+ARCH=""
+
+usage() {
+    echo "Script to build termux-packages for Scribe"
+    echo ""
+    echo "Usage: $0 [options]"
+    echo ""
+    echo "Options:"
+    echo "  -a        The target architecture. Must be one of ${ALL_ARCHS}."
+    echo "  -h        Show this help message and exit"
+    echo ""
+}
+
+sed_escape() {
+  printf '%s\n' "$1" | sed -e 's/[.[\*^$/]/\\&/g' -e 's/\\/\\\\/g' -e 's/#/\\#/g'
+}
+
+setup_termux_packages() {
+    echo "Cloning termux-packages@$TERMUX_PACKAGES_VERSION..."
+
+    pushd "$script_dir" || scribe_error_exit "Unable to pushd $script_dir"
+    git clone --branch "$TERMUX_PACKAGES_VERSION"\
+        --depth=1 \
+        "$TERMUX_PACKAGES_REPO"\
+        "$TERMUX_PACKAGES_DIR"
+
+    pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
+
+    # Change package name
+    echo "Updating package name.."
+    grep -rniF . -e "${TERMUX_PACKAGE_NAME}" -l\
+        --exclude-dir=".git" | \
+        xargs -L1 sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${SCRIBE_PACKAGE_NAME}/g" || \
+        scribe_error_exit "Unable to update package name"
+
+    # Update the path to packages directory in build-bootstraps.sh
+    echo "Updating termux-packages path in build-bootstraps.sh..."
+    sed -i "s#^TERMUX_PACKAGES_DIRECTORY=.*#TERMUX_PACKAGES_DIRECTORY=\"$TERMUX_PACKAGES_DIR\"#g"\
+        scripts/build-bootstraps.sh || \
+        scribe_error_exit "Unable to update termux-packages path in build-bootstraps.sh"
+
+    # Fix missing directory error during build
+    echo "Fix missing directory error in build-bootstraps.sh..."
+    # shellcheck disable=SC2016
+    sed -i 's#add_termux_bootstrap_second_stage_files() {#add_termux_bootstrap_second_stage_files() {\n\tmkdir -p "${BOOTSTRAP_ROOTFS}/${TERMUX__PREFIX__PROFILE_D_DIR}"#g'\
+        ./scripts/build-bootstraps.sh
+
+    # Removes existing keyrings
+    echo "Removing existing GPG keys..."
+    rm -rvf packages/termux-keyring/*.gpg
+
+    # Update buildscript to remove key installation commands
+    # Also, add command to install our gpg key
+    echo "Patching termux-keyring..."
+    patch -p1 --no-backup-if-mismatch<"$script_dir/termux-keyring.patch" ||\
+        scribe_error_exit "Failed to patch termux-keyring"
+
+    # Add our own keyring
+    echo "Adding our keyring..."
+    cp "$script_dir/scribe-oss.gpg" "./packages/termux-keyring/scribe-oss.gpg"
+
+    popd || scribe_error_exit "Unable to popd from termux-packages"
+    popd || scribe_error_exit "Unable to popd from script_dir"
+}
+
+if [[ $# -eq 0 ]]; then
+    # No arguments provided
+    usage
+    exit 1
+fi
+
+# Argument parsing
+while getopts "a:h" opt; do
+    case "$opt" in
+    a) ARCH="$OPTARG" ;;
+    h)
+        usage
+        exit 0
+        ;;
+    *)
+        echo "Invalid option" >&2
+        exit 1
+        ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [[ "$ALL_ARCHS" != *" $ARCH "* ]]; then
+    scribe_error_exit "Unsupported arch: '$ARCH'"
+fi
+
+OUTPUT_DIR="$script_dir/output/$ARCH"
+mkdir -p "${OUTPUT_DIR}"
+
+# Check required commands
+scribe_check_command "git"
+scribe_check_command "patch"
+
+if ! [[ -d "$TERMUX_PACKAGES_DIR" ]]; then
+    setup_termux_packages
+fi
+
+# All the packages that we'll be building
+declare -a SCRIBE_PACKAGES=(
+
+    ## ---- Bootstrap packages ---- ##
+
+    # Core utilities.
+    "apt"
+    "bash"
+    "command-not-found"
+    "coreutils"
+    "dash"
+    "diffutils"
+    "findutils"
+    "gawk"
+    "grep"
+    "gzip"
+    "less"
+    "libbz2"
+    "procps"
+    "psmisc"
+    "sed"
+    "tar"
+    "termux-core"
+    "termux-exec"
+    "termux-keyring"
+    "termux-tools"
+    "util-linux"
+
+    # Additional.
+    "ed"
+    "debianutils"
+    "dos2unix"
+    "inetutils"
+    "lsof"
+    "nano"
+    "net-tools"
+    "patch"
+    "unzip"
+
+    ## ---- Plugin packages - Java ---- ##
+    "openjdk-21"
+)
+
+echo
+echo "==="
+echo "Building packages: ${SCRIBE_PACKAGES[*]}"
+echo "==="
+echo
+
+pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
+./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}"
+popd || scribe_error_exit "Unable to popd from termux-packages"
