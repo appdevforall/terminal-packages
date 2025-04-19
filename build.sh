@@ -72,6 +72,12 @@ setup_termux_packages() {
         scripts/build-bootstraps.sh || \
         scribe_error_exit "Unable to update termux-packages path in build-bootstraps.sh"
 
+    # Update the path to the directory where .deb files are placed
+    echo "Update .deb output path in build-bootstrap.sh..."
+    sed -i "s#TERMUX_BUILT_DEBS_DIRECTORY=.*#TERMUX_BUILT_DEBS_DIRECTORY=\"$OUTPUT_DIR\"#g"\
+        scripts/build-bootstraps.sh || \
+        scribe_error_exit "Unable to update output path in build-bootstraps.sh"
+
     # Fix missing directory error during build
     echo "Fix missing directory error in build-bootstraps.sh..."
     # shellcheck disable=SC2016
