@@ -6,6 +6,8 @@ build-packages:
   stage: build
   tags:
     - saas-linux-medium-amd64
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
   parallel:
     matrix:
       - ARCH:
