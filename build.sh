@@ -102,6 +102,9 @@ setup_termux_packages() {
     echo "Adding our keyring..."
     cp "$script_dir/scribe-oss.gpg" "./packages/termux-keyring/scribe-oss.gpg"
 
+    # Marked patched
+    touch .scribe-patched
+
     popd || scribe_error_exit "Unable to popd from termux-packages"
     popd || scribe_error_exit "Unable to popd from script_dir"
 }
@@ -139,7 +142,7 @@ mkdir -p "${OUTPUT_DIR}"
 scribe_check_command "git"
 scribe_check_command "patch"
 
-if ! [[ -d "$TERMUX_PACKAGES_DIR" ]]; then
+if ! [[ -f "$TERMUX_PACKAGES_DIR/.scribe-patched" ]]; then
     setup_termux_packages
 fi
 
