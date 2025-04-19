@@ -82,7 +82,13 @@ setup_termux_packages() {
     echo "Fix missing directory error in build-bootstraps.sh..."
     # shellcheck disable=SC2016
     sed -i 's#add_termux_bootstrap_second_stage_files() {#add_termux_bootstrap_second_stage_files() {\n\tmkdir -p "${BOOTSTRAP_ROOTFS}/${TERMUX__PREFIX__PROFILE_D_DIR}"#g'\
-        ./scripts/build-bootstraps.sh
+        ./scripts/build-bootstraps.sh || \
+        scribe_error_exit "Unable to add mkdir command"
+
+    # Fix incorrect name for bzip2 package
+    sed -i "s/bzip2/libbz2/g" \
+        ./scripts/build-bootstraps.sh || \
+        scribe_error_exit "Unable to replace 'bzip2' with 'libbz2'"
 
     # Removes existing keyrings
     echo "Removing existing GPG keys..."
@@ -136,6 +142,7 @@ mkdir -p "${OUTPUT_DIR}"
 # Check required commands
 scribe_check_command "git"
 scribe_check_command "patch"
+scribe_check_command "time"
 
 if ! [[ -f "$TERMUX_PACKAGES_DIR/.scribe-patched" ]]; then
     setup_termux_packages
@@ -184,12 +191,22 @@ declare -a SCRIBE_PACKAGES=(
     "openjdk-21"
 )
 
+pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
+
 echo
 echo "==="
 echo "Building packages: ${SCRIBE_PACKAGES[*]}"
 echo "==="
 echo
 
-pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
-./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}"
+time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}"
+
+echo
+echo "==="
+echo "Generating bootstrap package"
+echo "==="
+echo
+
+time ./scripts/build-bootstraps.sh --architectures "$ARCH"
+
 popd || scribe_error_exit "Unable to popd from termux-packages"

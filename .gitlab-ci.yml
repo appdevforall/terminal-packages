@@ -24,4 +24,4 @@ build-packages:
     expire_in: "7 days"
     paths:
       - output/**/*
-  
+
