@@ -1,0 +1,21 @@
+stages:
+  - build
+
+build-packages:
+  image: ghcr.io/termux/package-builder:latest
+  stage: build
+  parallel:
+    matrix:
+      - ARCH:
+        - aarch64
+        - x86_64
+  script:
+    - bash -x build.sh -a "$ARCH"
+  artifacts:
+    untracked: false
+    when: on_success
+    access: all
+    expire_in: "30 days"
+    paths:
+      - bootstrap-*.zip
+  
