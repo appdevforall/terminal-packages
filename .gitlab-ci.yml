@@ -4,6 +4,8 @@ stages:
 build-packages:
   image: ghcr.io/termux/package-builder:latest
   stage: build
+  tags:
+    - saas-linux-medium-amd64
   parallel:
     matrix:
       - ARCH:
