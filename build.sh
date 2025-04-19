@@ -25,8 +25,6 @@ script_dir=$(dirname "$script")
 # shellcheck source=utils.sh
 . "$script_dir/utils.sh"
 
-TERMUX_PACKAGES_VERSION="bootstrap-2025.04.13-r1+apt.android-7"
-TERMUX_PACKAGES_REPO="https://github.com/termux/termux-packages"
 TERMUX_PACKAGES_DIR="$script_dir/termux-packages"
 TERMUX_PACKAGE_NAME="com.termux"
 
@@ -59,14 +57,6 @@ sed_escape() {
 }
 
 setup_termux_packages() {
-    echo "Cloning termux-packages@$TERMUX_PACKAGES_VERSION..."
-
-    pushd "$script_dir" || scribe_error_exit "Unable to pushd $script_dir"
-    git clone --branch "$TERMUX_PACKAGES_VERSION"\
-        --depth=1 \
-        "$TERMUX_PACKAGES_REPO"\
-        "$TERMUX_PACKAGES_DIR"
-
     pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
 
     # Change package name
