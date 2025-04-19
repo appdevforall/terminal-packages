@@ -19,7 +19,7 @@ build-packages:
     - ls bootstrap-*.zip && mv bootstrap-*.zip output/
   artifacts:
     untracked: false
-    when: on_success
+    when: always
     access: all
     expire_in: "7 days"
     paths:
