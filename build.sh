@@ -96,7 +96,6 @@ setup_termux_packages() {
     touch .scribe-patched
 
     popd || scribe_error_exit "Unable to popd from termux-packages"
-    popd || scribe_error_exit "Unable to popd from script_dir"
 }
 
 if [[ $# -eq 0 ]]; then
