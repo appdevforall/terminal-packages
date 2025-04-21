@@ -46,7 +46,7 @@ declare -a PATCHES=(
     # Required to fix some build failures
     "make-libdb-depend-on-android-shmem.patch"
     "make-libunbound-depend-on-android-shmem.patch"
-    "make-libx11-depend-on-android-shmem.patch "
+    "make-libx11-depend-on-android-shmem.patch"
 )
 
 # Script configuration
