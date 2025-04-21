@@ -42,11 +42,11 @@ declare -a PATCHES=(
     # Adds our own GPG keys
     "termux-keyring.patch"
 
-    # Makes libx11 depend on and link against libandroid-shmem.so
-    "make-x11-depend-on-android-shmem.patch"
-
-    # Makes libx11 depend on and link against libandroid-shmem.so
+    # Makes some of the packages depend on and link against libandroid-shmem.so
+    # Required to fix some build failures
+    "make-libdb-depend-on-android-shmem.patch"
     "make-libunbound-depend-on-android-shmem.patch"
+    "make-libx11-depend-on-android-shmem.patch "
 )
 
 # Script configuration
