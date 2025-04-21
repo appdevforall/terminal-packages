@@ -37,6 +37,15 @@ export TERMUX_SCRIPTDIR
 TERMUX_PKG_API_LEVEL=28
 export TERMUX_PKG_API_LEVEL
 
+declare -a PATCHES=(
+
+    # Adds our own GPG keys
+    "termux-keyring.patch"
+
+    # Makes libx11 depend on and link against libandroid-shmem.so
+    "make-x11-depend-on-android-shmem.patch"
+)
+
 # Script configuration
 ALL_ARCHS=" aarch64 arm i686 x86_64 "
 ARCH=""
@@ -94,15 +103,17 @@ setup_termux_packages() {
     echo "Removing existing GPG keys..."
     rm -rvf packages/termux-keyring/*.gpg
 
-    # Update buildscript to remove key installation commands
-    # Also, add command to install our gpg key
-    echo "Patching termux-keyring..."
-    patch -p1 --no-backup-if-mismatch<"$script_dir/termux-keyring.patch" ||\
-        scribe_error_exit "Failed to patch termux-keyring"
-
     # Add our own keyring
     echo "Adding our keyring..."
     cp "$script_dir/scribe-oss.gpg" "./packages/termux-keyring/scribe-oss.gpg"
+
+    # Apply patches
+    for patch in "${PATCHES[@]}"; do
+        if patch -p1 --no-backup-if-mismatch<"$script_dir/patches/$patch" ||\
+            scribe_error_exit "Failed to apply '$patch'"; then
+            scribe_ok "Applied '$patch'"
+        fi
+    done
 
     # Marked patched
     touch .scribe-patched
