@@ -222,9 +222,6 @@ if ! time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}"
     scribe_error_exit "Failed to build packages."
 fi
 
-# Move bootstrap ZIPs to OUTPUT_DIR
-mv "$TERMUX_PACKAGES_DIR/bootstrap-*.zip" "$OUTPUT_DIR/"
-
 echo
 echo "==="
 echo "Generating bootstrap package"
@@ -235,5 +232,8 @@ if ! time ./scripts/build-bootstraps.sh --architectures "$ARCH" |\
     tee "$OUTPUT_DIR/bootstrap.log"; then
     scribe_error_exit "Failed to generate bootstrap packages."
 fi
+
+# Move bootstrap ZIPs to OUTPUT_DIR
+mv "$TERMUX_PACKAGES_DIR/bootstrap-*.zip" "$OUTPUT_DIR/"
 
 popd || scribe_error_exit "Unable to popd from termux-packages"
