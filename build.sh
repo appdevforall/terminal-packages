@@ -44,6 +44,9 @@ declare -a PATCHES=(
 
     # Makes libx11 depend on and link against libandroid-shmem.so
     "make-x11-depend-on-android-shmem.patch"
+
+    # Makes libx11 depend on and link against libandroid-shmem.so
+    "make-libunbound-depend-on-android-shmem.patch"
 )
 
 # Script configuration

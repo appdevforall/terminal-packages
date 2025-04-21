@@ -1,0 +1,24 @@
+diff --git a/packages/libunbound/build.sh b/packages/libunbound/build.sh
+index 6555d4c..8a9421a 100644
+--- a/packages/libunbound/build.sh
++++ b/packages/libunbound/build.sh
+@@ -6,7 +6,7 @@ TERMUX_PKG_VERSION="1.22.0"
+ TERMUX_PKG_SRCURL=https://nlnetlabs.nl/downloads/unbound/unbound-${TERMUX_PKG_VERSION}.tar.gz
+ TERMUX_PKG_SHA256=c5dd1bdef5d5685b2cedb749158dd152c52d44f65529a34ac15cd88d4b1b3d43
+ TERMUX_PKG_AUTO_UPDATE=true
+-TERMUX_PKG_DEPENDS="libevent, libnghttp2, openssl, resolv-conf"
++TERMUX_PKG_DEPENDS="libandroid-shmem, libevent, libnghttp2, openssl, resolv-conf"
+ TERMUX_PKG_BUILD_DEPENDS="python, swig"
+ TERMUX_PKG_BREAKS="unbound (<< 1.17.1-1)"
+ TERMUX_PKG_REPLACES="unbound (<< 1.17.1-1)"
+@@ -35,6 +35,10 @@ ac_cv_func_getpwnam=no
+ --with-username=
+ "
+ 
++termux_step_pre_configure() {
++	LDFLAGS+=" -landroid-shmem "
++}
++
+ termux_step_post_massage() {
+ 	mkdir -p "$TERMUX_PKG_MASSAGEDIR/$TERMUX_PREFIX/var/run"
+ }
