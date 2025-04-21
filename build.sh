@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-set -eu
+set -euo pipefail
 
 script=$(realpath "$0")
 script_dir=$(dirname "$script")
@@ -143,10 +143,14 @@ mkdir -p "${OUTPUT_DIR}"
 scribe_check_command "git"
 scribe_check_command "patch"
 scribe_check_command "time"
+scribe_check_command "tee"
 
 if ! [[ -f "$TERMUX_PACKAGES_DIR/.scribe-patched" ]]; then
     setup_termux_packages
 fi
+
+# Symlink termux-packages/output to OUTPUT_DIR
+ln -sf "$OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
 
 # All the packages that we'll be building
 declare -a SCRIBE_PACKAGES=(
@@ -199,7 +203,13 @@ echo "Building packages: ${SCRIBE_PACKAGES[*]}"
 echo "==="
 echo
 
-time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}"
+if ! time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}" |\
+    tee "$OUTPUT_DIR/build.log"; then
+    scribe_error_exit "Failed to build packages."
+fi
+
+# Move bootstrap ZIPs to OUTPUT_DIR
+mv "$TERMUX_PACKAGES_DIR/bootstrap-*.zip" "$OUTPUT_DIR/"
 
 echo
 echo "==="
@@ -207,6 +217,9 @@ echo "Generating bootstrap package"
 echo "==="
 echo
 
-time ./scripts/build-bootstraps.sh --architectures "$ARCH"
+if ! time ./scripts/build-bootstraps.sh --architectures "$ARCH" |\
+    tee "$OUTPUT_DIR/bootstrap.log"; then
+    scribe_error_exit "Failed to generate bootstrap packages."
+fi
 
 popd || scribe_error_exit "Unable to popd from termux-packages"

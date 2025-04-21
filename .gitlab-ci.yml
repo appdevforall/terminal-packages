@@ -14,8 +14,8 @@ build-packages:
         - aarch64
         - x86_64
   script:
-    - bash -x build.sh -a "$ARCH" | tee build.log
-    - mv build.log output/
+    - mkdir output
+    - bash -x build.sh -a "$ARCH"
     - ls bootstrap-*.zip && mv bootstrap-*.zip output/
   artifacts:
     untracked: false
