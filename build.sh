@@ -234,6 +234,6 @@ if ! time ./scripts/build-bootstraps.sh --architectures "$ARCH" |\
 fi
 
 # Move bootstrap ZIPs to OUTPUT_DIR
-mv "$TERMUX_PACKAGES_DIR/bootstrap-*.zip" "$OUTPUT_DIR/"
+mv "$TERMUX_PACKAGES_DIR/bootstrap-$ARCH.zip" "$OUTPUT_DIR/"
 
 popd || scribe_error_exit "Unable to popd from termux-packages"
