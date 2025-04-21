@@ -4,6 +4,7 @@ stages:
 build-packages:
   image: ghcr.io/termux/package-builder:latest
   stage: build
+  timeout: 6h
   tags:
     - saas-linux-medium-amd64
   variables:
