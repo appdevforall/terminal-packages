@@ -78,30 +78,6 @@ setup_termux_packages() {
         xargs -L1 sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${SCRIBE_PACKAGE_NAME}/g" || \
         scribe_error_exit "Unable to update package name"
 
-    # Update the path to packages directory in build-bootstraps.sh
-    echo "Updating termux-packages path in build-bootstraps.sh..."
-    sed -i "s#^TERMUX_PACKAGES_DIRECTORY=.*#TERMUX_PACKAGES_DIRECTORY=\"$TERMUX_PACKAGES_DIR\"#g"\
-        scripts/build-bootstraps.sh || \
-        scribe_error_exit "Unable to update termux-packages path in build-bootstraps.sh"
-
-    # Update the path to the directory where .deb files are placed
-    echo "Update .deb output path in build-bootstrap.sh..."
-    sed -i "s#TERMUX_BUILT_DEBS_DIRECTORY=.*#TERMUX_BUILT_DEBS_DIRECTORY=\"$OUTPUT_DIR\"#g"\
-        scripts/build-bootstraps.sh || \
-        scribe_error_exit "Unable to update output path in build-bootstraps.sh"
-
-    # Fix missing directory error during build
-    echo "Fix missing directory error in build-bootstraps.sh..."
-    # shellcheck disable=SC2016
-    sed -i 's#add_termux_bootstrap_second_stage_files() {#add_termux_bootstrap_second_stage_files() {\n\tmkdir -p "${BOOTSTRAP_ROOTFS}/${TERMUX__PREFIX__PROFILE_D_DIR}"#g'\
-        ./scripts/build-bootstraps.sh || \
-        scribe_error_exit "Unable to add mkdir command"
-
-    # Fix incorrect name for bzip2 package
-    sed -i "s/bzip2/libbz2/g" \
-        ./scripts/build-bootstraps.sh || \
-        scribe_error_exit "Unable to replace 'bzip2' with 'libbz2'"
-
     # Removes existing keyrings
     echo "Removing existing GPG keys..."
     rm -rvf packages/termux-keyring/*.gpg
@@ -224,17 +200,6 @@ echo
 if ! time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}" |\
     tee "$OUTPUT_DIR/build.log"; then
     scribe_error_exit "Failed to build packages."
-fi
-
-echo
-echo "==="
-echo "Generating bootstrap package"
-echo "==="
-echo
-
-if ! time ./scripts/build-bootstraps.sh --architectures "$ARCH" |\
-    tee "$OUTPUT_DIR/bootstrap.log"; then
-    scribe_error_exit "Failed to generate bootstrap packages."
 fi
 
 # Move bootstrap ZIPs to OUTPUT_DIR
