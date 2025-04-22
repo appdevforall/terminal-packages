@@ -50,7 +50,7 @@ declare -a PATCHES=(
 )
 
 # Script configuration
-ALL_ARCHS=" aarch64 arm i686 x86_64 "
+ALL_ARCHS=" aarch64 x86_64 "
 ARCH=""
 
 usage() {
