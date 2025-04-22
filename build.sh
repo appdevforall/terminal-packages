@@ -153,11 +153,15 @@ fi
 OUTPUT_DIR="$script_dir/output/$ARCH"
 mkdir -p "${OUTPUT_DIR}"
 
+# For termux build scripts
+TERMUX_OUTPUT_DIR="$OUTPUT_DIR/debs"
+export TERMUX_OUTPUT_DIR
+
 # Check required commands
 scribe_check_command "git"
 scribe_check_command "patch"
-scribe_check_command "time"
 scribe_check_command "tee"
+scribe_check_command "time"
 
 if ! [[ -f "$TERMUX_PACKAGES_DIR/.scribe-patched" ]]; then
     setup_termux_packages
