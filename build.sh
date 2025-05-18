@@ -94,6 +94,10 @@ setup_termux_packages() {
         fi
     done
 
+    # Update the packages repository
+    grep -rnI . -e "https://packages-cf.termux.dev/apt/termux-main" -l |\
+        xargs -L1 sed -i 's|https://packages-cf.termux.dev/apt/termux-main|https://gitlab.com/scribe-oss/core/scribe-packages-repo/-/raw/main|g'
+
     # Marked patched
     touch .scribe-patched
 
