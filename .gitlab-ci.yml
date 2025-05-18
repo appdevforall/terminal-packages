@@ -25,3 +25,81 @@ build-packages:
     expire_in: "7 days"
     paths:
       - output/**/*
+
+publish-packages:
+  image: alpine:latest
+  stage: publish
+  needs:
+    - job: "build-packages"
+      artifacts: true
+      optional: false
+  variables:
+    GPG_KEY_ID: 8A53ACD64F187912B8F988FFA164D028A3299DA6
+    TARGET_BRANCH: dev
+  before_script: |
+    set -eu
+    set -o pipefail
+
+    # Install packages
+    apk add --no-cache bash curl git gnupg ca-certificates
+
+    GPG_HOME=$(mktemp -d)
+    export GNUPGHOME=$GPG_HOME
+    chmod 700 $GNUPGHOME
+
+    echo "$PACKAGES_GPG_KEY" | base64 -d | gpg --batch --import
+  script: |
+    #!/bin/bash
+    shopt -s nullglob
+    set -eu
+    set -o pipefail
+    set -o xtrace
+
+    # Setup Git user
+    git config --global user.email "ci@scribe.com"
+    git config --global user.name "Scribe CI"
+
+    # Download termux-apt-repo tool
+    curl -fLo termux-apt-repo https://github.com/termux/termux-apt-repo/raw/refs/heads/master/termux-apt-repo
+    chmod +x termux-apt-repo
+
+    # Clone the packages repository
+    set +o xtrace
+    git clone "https://oauth2:$SCRIBE_GITLAB_API_TOKEN@gitlab.com/scribe-oss/core/scribe-packages-repo.git"
+    pushd scribe-packages-repo
+    git checkout "${TARGET_BRANCH}" || git checkout -b "${TARGET_BRANCH}"
+    popd
+    set -o xtrace
+
+    # Create symlinks to deb files in a common directory
+    declare -a ARCHS=("aarch64" "x86_64")
+    mkdir -p output/debs
+    for arch in "${ARCHS[@]}"; do
+      for deb in "output/$arch/debs"/*.deb; do
+        ln -sf "$deb" "output/debs/$(basename "$deb")"
+      done
+    done
+
+    # Update apt-repository
+    # usage: termux-apt-repo [-h] [--use-hard-links] [-s] input output [dist] [comp]
+    ./termux-apt-repo output/debs scribe-packages-repo stable main
+
+    # Sign APT repository
+    echo "$PACKAGES_GPG_KEY_PASS" |\
+      gpg --yes \
+        --passphrase-fd 0\
+        --pinentry-mode loopback\
+        --digest-algo SHA256\
+        --clearsign\
+        -u "${GPG_KEY_ID}"\
+        -o scribe-packages-repo/dists/stable/InRelease\
+        scribe-packages-repo/dists/stable/Release
+
+    # Update repository
+    pushd scribe-packages-repo
+    git add dists/stable
+    if ! git diff --cached --quiet; then
+      git commit -m "feat: repository update for ${CI_PROJECT_PATH}@${CI_COMMIT_SHORT_SHA}"
+      git push origin "HEAD:${TARGET_BRANCH}"
+    fi
+    popd
