@@ -1,5 +1,6 @@
 stages:
   - build
+  - publish
 
 build-packages:
   image: ghcr.io/termux/package-builder:latest
@@ -17,7 +18,6 @@ build-packages:
   script:
     - mkdir output
     - bash -x build.sh -a "$ARCH"
-    - ls bootstrap-*.zip && mv bootstrap-*.zip output/
   artifacts:
     untracked: false
     when: always
@@ -25,4 +25,3 @@ build-packages:
     expire_in: "7 days"
     paths:
       - output/**/*
-
