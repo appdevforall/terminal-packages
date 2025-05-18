@@ -136,10 +136,6 @@ declare -a EXTRA_PACKAGES=("$@")
 OUTPUT_DIR="$script_dir/output/$ARCH"
 mkdir -p "${OUTPUT_DIR}"
 
-# For termux build scripts
-TERMUX_OUTPUT_DIR="$OUTPUT_DIR/debs"
-export TERMUX_OUTPUT_DIR
-
 # Check required commands
 scribe_check_command "git"
 scribe_check_command "patch"
@@ -150,10 +146,10 @@ if ! [[ -f "$TERMUX_PACKAGES_DIR/.scribe-patched" ]]; then
     setup_termux_packages
 fi
 
-# Symlink termux-packages/output to TERMUX_OUTPUT_DIR
+# Symlink termux-packages/output to OUTPUT_DIR
 if ! [[ -L "$TERMUX_PACKAGES_DIR/output" ]]; then
     rm -rf "$TERMUX_PACKAGES_DIR/output"
-    ln -sf "$TERMUX_OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
+    ln -sf "$OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
 fi
 
 # All the packages that we'll be building
