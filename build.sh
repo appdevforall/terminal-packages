@@ -196,7 +196,7 @@ declare -a SCRIBE_PACKAGES=(
     "unzip"
 
     ## ---- Plugin packages - C/C++ ---- ##
-    "clang"
+    "libllvm"
 
     ## ---- Plugin packages - Java ---- ##
     "openjdk-21"
