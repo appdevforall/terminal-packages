@@ -6,7 +6,7 @@ build-packages:
   stage: build
   timeout: 6h
   tags:
-    - saas-linux-medium-amd64
+    - saas-linux-xlarge-amd64
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   parallel:
