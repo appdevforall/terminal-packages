@@ -56,7 +56,7 @@ ARCH=""
 usage() {
     echo "Script to build termux-packages for Scribe"
     echo ""
-    echo "Usage: $0 [options]"
+    echo "Usage: $0 [options] [package...]"
     echo ""
     echo "Options:"
     echo "  -a        The target architecture. Must be one of ${ALL_ARCHS}."
@@ -126,6 +126,9 @@ if [[ "$ALL_ARCHS" != *" $ARCH "* ]]; then
     scribe_error_exit "Unsupported arch: '$ARCH'"
 fi
 
+# Get extra packages to build
+declare -a EXTRA_PACKAGES=("$@")
+
 OUTPUT_DIR="$script_dir/output/$ARCH"
 mkdir -p "${OUTPUT_DIR}"
 
@@ -143,8 +146,11 @@ if ! [[ -f "$TERMUX_PACKAGES_DIR/.scribe-patched" ]]; then
     setup_termux_packages
 fi
 
-# Symlink termux-packages/output to OUTPUT_DIR
-ln -sf "$OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
+# Symlink termux-packages/output to TERMUX_OUTPUT_DIR
+if ! [[ -L "$TERMUX_PACKAGES_DIR/output" ]]; then
+    rm -rf "$TERMUX_PACKAGES_DIR/output"
+    ln -sf "$TERMUX_OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
+fi
 
 # All the packages that we'll be building
 declare -a SCRIBE_PACKAGES=(
@@ -185,8 +191,18 @@ declare -a SCRIBE_PACKAGES=(
     "patch"
     "unzip"
 
+    ## ---- Plugin packages - C/C++ ---- ##
+    "clang"
+
     ## ---- Plugin packages - Java ---- ##
     "openjdk-21"
+
+    ## ---- Plugin packages - Python ---- ##
+    "python"
+    "python-pip"
+
+    ## ---- Extra packages ---- #
+    "${EXTRA_PACKAGES[@]}"
 )
 
 pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
@@ -201,8 +217,5 @@ if ! time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}"
     tee "$OUTPUT_DIR/build.log"; then
     scribe_error_exit "Failed to build packages."
 fi
-
-# Move bootstrap ZIPs to OUTPUT_DIR
-mv "$TERMUX_PACKAGES_DIR/bootstrap-$ARCH.zip" "$OUTPUT_DIR/"
 
 popd || scribe_error_exit "Unable to popd from termux-packages"
