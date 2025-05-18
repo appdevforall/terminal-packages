@@ -217,7 +217,7 @@ echo "Building packages: ${SCRIBE_PACKAGES[*]}"
 echo "==="
 echo
 
-if ! time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}" |\
+if ! time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}" |&\
     tee "$OUTPUT_DIR/build.log"; then
     scribe_error_exit "Failed to build packages."
 fi
