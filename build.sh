@@ -47,11 +47,15 @@ declare -a PATCHES=(
     "make-libdb-depend-on-android-shmem.patch"
     "make-libunbound-depend-on-android-shmem.patch"
     "make-libx11-depend-on-android-shmem.patch"
+
+    # Fix dependencies in binutils-libs
+    "fix-binutils-libs-dependencies.patch"
 )
 
 # Script configuration
 ALL_ARCHS=" aarch64 x86_64 "
 ARCH=""
+EXPLICIT=""
 
 usage() {
     echo "Script to build termux-packages for Scribe"
@@ -60,6 +64,7 @@ usage() {
     echo ""
     echo "Options:"
     echo "  -a        The target architecture. Must be one of ${ALL_ARCHS}."
+    echo "  -e        Build only the explicitly specified packages"
     echo "  -h        Show this help message and exit"
     echo ""
 }
@@ -111,9 +116,10 @@ if [[ $# -eq 0 ]]; then
 fi
 
 # Argument parsing
-while getopts "a:h" opt; do
+while getopts "a:eh" opt; do
     case "$opt" in
     a) ARCH="$OPTARG" ;;
+    e) EXPLICIT="true" ;;
     h)
         usage
         exit 0
@@ -153,57 +159,60 @@ if ! [[ -L "$TERMUX_PACKAGES_DIR/output" ]]; then
 fi
 
 # All the packages that we'll be building
-declare -a SCRIBE_PACKAGES=(
+declare -a SCRIBE_PACKAGES
 
-    ## ---- Bootstrap packages ---- ##
+if [[ "$EXPLICIT" != "true" ]]; then
+    SCRIBE_PACKAGES+=(
 
-    # Core utilities.
-    "apt"
-    "bash"
-    "command-not-found"
-    "coreutils"
-    "dash"
-    "diffutils"
-    "findutils"
-    "gawk"
-    "grep"
-    "gzip"
-    "less"
-    "libbz2"
-    "procps"
-    "psmisc"
-    "sed"
-    "tar"
-    "termux-core"
-    "termux-exec"
-    "termux-keyring"
-    "termux-tools"
-    "util-linux"
+        ## ---- Bootstrap packages ---- ##
 
-    # Additional.
-    "ed"
-    "debianutils"
-    "dos2unix"
-    "inetutils"
-    "lsof"
-    "nano"
-    "net-tools"
-    "patch"
-    "unzip"
+        # Core utilities.
+        "apt"
+        "bash"
+        "command-not-found"
+        "coreutils"
+        "dash"
+        "diffutils"
+        "findutils"
+        "gawk"
+        "grep"
+        "gzip"
+        "less"
+        "libbz2"
+        "procps"
+        "psmisc"
+        "sed"
+        "tar"
+        "termux-core"
+        "termux-exec"
+        "termux-keyring"
+        "termux-tools"
+        "util-linux"
 
-    ## ---- Plugin packages - C/C++ ---- ##
-    "libllvm"
+        # Additional.
+        "ed"
+        "debianutils"
+        "dos2unix"
+        "inetutils"
+        "lsof"
+        "nano"
+        "net-tools"
+        "patch"
+        "unzip"
 
-    ## ---- Plugin packages - Java ---- ##
-    "openjdk-21"
+        ## ---- Plugin packages - C/C++ ---- ##
+        "libllvm"
 
-    ## ---- Plugin packages - Python ---- ##
-    "python"
-    "python-pip"
+        ## ---- Plugin packages - Java ---- ##
+        "openjdk-21"
 
-    ## ---- Extra packages ---- #
-    "${EXTRA_PACKAGES[@]}"
-)
+        ## ---- Plugin packages - Python ---- ##
+        "python"
+        "python-pip"
+    )
+fi
+
+SCRIBE_PACKAGES+=("${EXTRA_PACKAGES[@]}")
 
 pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
 
@@ -213,8 +222,8 @@ echo "Building packages: ${SCRIBE_PACKAGES[*]}"
 echo "==="
 echo
 
-if ! time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}" |&\
-    tee "$OUTPUT_DIR/build.log"; then
+if ! { time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}" |&\
+    tee "$OUTPUT_DIR/build.log"; }; then
     scribe_error_exit "Failed to build packages."
 fi
 
