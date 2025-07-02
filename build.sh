@@ -56,7 +56,7 @@ declare -a PATCHES=(
 )
 
 # Script configuration
-SCRIBE_ALL_ARCHS=" aarch64 arm x86 x86_64 "
+SCRIBE_ALL_ARCHS=" aarch64 arm i686 x86_64 "
 SCRIBE_ARCH=""
 SCRIBE_EXPLICIT="false"
 SCRIBE_NO_BUILD="false"
