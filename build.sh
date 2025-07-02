@@ -25,10 +25,13 @@ script_dir=$(dirname "$script")
 # shellcheck source=utils.sh
 . "$script_dir/utils.sh"
 
+TERMUX_PACKAGES_REPO="https://github.com/termux/termux-packages.git"
+TERMUX_PACKAGES_VERSION="bootstrap-2025.06.29-r1+apt.android-7"
 TERMUX_PACKAGES_DIR="$script_dir/termux-packages"
 TERMUX_PACKAGE_NAME="com.termux"
 
 SCRIBE_PACKAGE_NAME="com.scribe"
+SCRIBE_GPG_KEY="$script_dir/scribe-oss.gpg"
 
 # Configure build environment variables
 TERMUX_SCRIPTDIR="$TERMUX_PACKAGES_DIR"
@@ -53,19 +56,27 @@ declare -a PATCHES=(
 )
 
 # Script configuration
-ALL_ARCHS=" aarch64 x86_64 "
-ARCH=""
-EXPLICIT=""
+SCRIBE_ALL_ARCHS=" aarch64 arm x86 x86_64 "
+SCRIBE_ARCH=""
+SCRIBE_EXPLICIT="false"
+SCRIBE_NO_BUILD="false"
+SCRIBE_REPO="https://gitlab.com/scribe-oss/core/scribe-packages-repo/-/raw/main"
 
 usage() {
     echo "Script to build termux-packages for Scribe"
     echo ""
-    echo "Usage: $0 [options] [package...]"
+    echo "Usage: $0 -a ARCH [options] [package...]"
     echo ""
     echo "Options:"
-    echo "  -a        The target architecture. Must be one of ${ALL_ARCHS}."
-    echo "  -e        Build only the explicitly specified packages"
-    echo "  -h        Show this help message and exit"
+    echo "  -a        The target architecture. Must be one of [${SCRIBE_ALL_ARCHS}]."
+    echo "  -e        Build only the explicitly specified packages."
+    echo "  -n        Set up the build, but do not execute."
+    echo "  -p        The package name of the application. Defaults to '${SCRIBE_PACKAGE_NAME}'."
+    echo "  -r        The repository where the built packages will be published."
+    echo "            Defaults to '${SCRIBE_REPO}'."
+    echo "  -s        The GPG key used for signing packages. Defaults to '${SCRIBE_GPG_KEY}'."
+    echo
+    echo "  -h        Show this help message and exit."
     echo ""
 }
 
@@ -74,6 +85,16 @@ sed_escape() {
 }
 
 setup_termux_packages() {
+    if [[ -e "$TERMUX_PACKAGES_DIR" ]] && ! [[ -d "$TERMUX_PACKAGES_DIR" ]]; then
+        scribe_error_exit "${TERMUX_PACKAGES_DIR} already exists and is not a directory."
+    fi
+
+    if ! [[ -d "$TERMUX_PACKAGES_DIR" ]]; then
+        echo "Cloning termux-packages..."
+        git clone -b "$TERMUX_PACKAGES_VERSION" --depth=1 "$TERMUX_PACKAGES_REPO" "$TERMUX_PACKAGES_DIR" ||\
+            scribe_error_exit "Failed to clone termux-packages"
+    fi
+
     pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
 
     # Change package name
@@ -89,7 +110,7 @@ setup_termux_packages() {
 
     # Add our own keyring
     echo "Adding our keyring..."
-    cp "$script_dir/scribe-oss.gpg" "./packages/termux-keyring/scribe-oss.gpg"
+    cp "${SCRIBE_GPG_KEY}" "./packages/termux-keyring/$(basename "$SCRIBE_GPG_KEY")"
 
     # Apply patches
     for patch in "${PATCHES[@]}"; do
@@ -101,7 +122,7 @@ setup_termux_packages() {
 
     # Update the packages repository
     grep -rnI . -e "https://packages-cf.termux.dev/apt/termux-main" -l |\
-        xargs -L1 sed -i 's|https://packages-cf.termux.dev/apt/termux-main|https://gitlab.com/scribe-oss/core/scribe-packages-repo/-/raw/main|g'
+        xargs -L1 sed -i "s|https://packages-cf.termux.dev/apt/termux-main|${SCRIBE_REPO}|g"
 
     # Marked patched
     touch .scribe-patched
@@ -116,10 +137,14 @@ if [[ $# -eq 0 ]]; then
 fi
 
 # Argument parsing
-while getopts "a:eh" opt; do
+while getopts "a:enp:r:s:h" opt; do
     case "$opt" in
-    a) ARCH="$OPTARG" ;;
-    e) EXPLICIT="true" ;;
+    a) SCRIBE_ARCH="$OPTARG"           ;;
+    e) SCRIBE_EXPLICIT="true"          ;;
+    n) SCRIBE_NO_BUILD="true"          ;;
+    p) SCRIBE_PACKAGE_NAME="$OPTARG"   ;;
+    r) SCRIBE_REPO="$OPTARG"           ;;
+    s) SCRIBE_GPG_KEY="$OPTARG"        ;;
     h)
         usage
         exit 0
@@ -132,14 +157,26 @@ while getopts "a:eh" opt; do
 done
 shift $((OPTIND - 1))
 
-if [[ "$ALL_ARCHS" != *" $ARCH "* ]]; then
-    scribe_error_exit "Unsupported arch: '$ARCH'"
+if [[ "$SCRIBE_ALL_ARCHS" != *" $SCRIBE_ARCH "* ]]; then
+    scribe_error_exit "Unsupported arch: '$SCRIBE_ARCH'"
+fi
+
+if [[ -z "${SCRIBE_PACKAGE_NAME}" ]]; then
+    scribe_error_exit "A package name must be specified."
+fi
+
+if [[ -z "${SCRIBE_REPO}" ]]; then
+    scribe_error_exit "A package repository URL must be specified."
+fi
+
+if ! [[ -f "${SCRIBE_GPG_KEY}" ]]; then
+    scribe_error_exit "${SCRIBE_GPG_KEY} does not exist or is not a file."
 fi
 
 # Get extra packages to build
 declare -a EXTRA_PACKAGES=("$@")
 
-OUTPUT_DIR="$script_dir/output/$ARCH"
+OUTPUT_DIR="$script_dir/output/$SCRIBE_ARCH"
 mkdir -p "${OUTPUT_DIR}"
 
 # Check required commands
@@ -158,10 +195,15 @@ if ! [[ -L "$TERMUX_PACKAGES_DIR/output" ]]; then
     ln -sf "$OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
 fi
 
+if [[ "$SCRIBE_NO_BUILD" == "true" ]]; then
+    scribe_ok "Skipping build."
+    exit 0
+fi
+
 # All the packages that we'll be building
 declare -a SCRIBE_PACKAGES
 
-if [[ "$EXPLICIT" != "true" ]]; then
+if [[ "$SCRIBE_EXPLICIT" != "true" ]]; then
     SCRIBE_PACKAGES+=(
 
         ## ---- Bootstrap packages ---- ##
@@ -222,7 +264,7 @@ echo "Building packages: ${SCRIBE_PACKAGES[*]}"
 echo "==="
 echo
 
-if ! { time ./build-package.sh -a "$ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}" |&\
+if ! { time ./build-package.sh -a "$SCRIBE_ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}" |&\
     tee "$OUTPUT_DIR/build.log"; }; then
     scribe_error_exit "Failed to build packages."
 fi
