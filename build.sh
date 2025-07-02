@@ -112,6 +112,10 @@ setup_termux_packages() {
     echo "Adding our keyring..."
     cp "${SCRIBE_GPG_KEY}" "./packages/termux-keyring/$(basename "$SCRIBE_GPG_KEY")"
 
+    # Create termux-keyring.patch
+    termux_keyring_patch="$script_dir/patches/termux-keyring.patch"
+    sed "s|@SCRIBE_GPG_KEY@|$(basename "$SCRIBE_GPG_KEY")|g" "${termux_keyring_patch}.in" > "$termux_keyring_patch"
+
     # Apply patches
     for patch in "${PATCHES[@]}"; do
         if patch -p1 --no-backup-if-mismatch<"$script_dir/patches/$patch" ||\
@@ -139,12 +143,12 @@ fi
 # Argument parsing
 while getopts "a:enp:r:s:h" opt; do
     case "$opt" in
-    a) SCRIBE_ARCH="$OPTARG"           ;;
-    e) SCRIBE_EXPLICIT="true"          ;;
-    n) SCRIBE_NO_BUILD="true"          ;;
-    p) SCRIBE_PACKAGE_NAME="$OPTARG"   ;;
-    r) SCRIBE_REPO="$OPTARG"           ;;
-    s) SCRIBE_GPG_KEY="$OPTARG"        ;;
+    a) SCRIBE_ARCH="$OPTARG"                         ;;
+    e) SCRIBE_EXPLICIT="true"                        ;;
+    n) SCRIBE_NO_BUILD="true"                        ;;
+    p) SCRIBE_PACKAGE_NAME="$OPTARG"                 ;;
+    r) SCRIBE_REPO="$OPTARG"                         ;;
+    s) SCRIBE_GPG_KEY="$(realpath "$OPTARG")"        ;;
     h)
         usage
         exit 0
