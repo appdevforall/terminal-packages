@@ -56,6 +56,9 @@ declare -a PATCHES=(
 
     # Fix dependencies in binutils-libs
     "fix-binutils-libs-dependencies.patch"
+
+    # libxml2 v2.14.4 has build errors
+    "revert-libxml2-to-2.14.3.patch"
 )
 
 # Script configuration
