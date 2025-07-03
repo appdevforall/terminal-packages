@@ -1,0 +1,149 @@
+diff --git a/packages/termux-tools/0003-motd.patch b/packages/termux-tools/0003-motd.patch
+new file mode 100644
+index 0000000..8b2e358
+--- /dev/null
++++ b/packages/termux-tools/0003-motd.patch
+@@ -0,0 +1,143 @@
++diff --git a/motds/Makefile.am b/motds/Makefile.am
++index 5e34b42..295fd35 100644
++--- a/motds/Makefile.am
+++++ b/motds/Makefile.am
++@@ -43,29 +43,30 @@ $(eval $(call process-rule,motd.sh))
++ motd:
++ 	@echo "Creating motd file"
++ 
++-	@echo "Welcome to Termux!" > motd
+++	@echo "Welcome to Code on the Go Terminal!" > motd
++ 	@echo "" >> motd
++-	@echo "Docs:       https://termux.dev/docs" >> motd
++-	@echo "Donate:     https://termux.dev/donate" >> motd
++-	@echo "Community:  https://termux.dev/community" >> motd
++-
+++	@echo "Here's what you need to know:" >> motd
+++	@echo " - Type 'ls' to see files and folders" >> motd
+++	@echo " - Type 'pwd' to see where you are" >> motd
+++	@echo " - Type 'cd <folder>' to enter a folder" >> motd
+++	@echo " - Type 'cd ..' to go back one folder" >> motd
+++	@echo " - Type 'exit' to leave the terminal" >> motd
+++	@echo "" >> motd
+++	@echo "Need help with any command? Type 'man <command>' or '<command> --help'" >> motd
++ 	@echo "" >> motd
++ 	@echo "Working with packages:" >> motd
+++	@echo " - Search :  apt-get search <query>" >> motd
+++	@echo " - Install:  apt-get install <package>" >> motd
+++	@echo " - Upgrade:  apt-get update && apt-get upgrade" >> motd
++ 	@echo "" >> motd
++-	@echo " - Search:  pkg search <query>" >> motd
++-	@echo " - Install: pkg install <package>" >> motd
++-	@echo " - Upgrade: pkg upgrade" >> motd
++-
++-    ifeq ($(TERMUX_PACKAGE_MANAGER),apt)
++-		@echo "" >> motd
++-		@echo "Subscribing to additional repositories:" >> motd
++-		@echo "" >> motd
++-		@echo " - Root:    pkg install root-repo" >> motd
++-		@echo " - X11:     pkg install x11-repo" >> motd
++-		@echo "" >> motd
++-		@echo "For fixing any repository issues," >> motd
++-		@echo "try 'termux-change-repo' command." >> motd
++-    endif
++-
+++	@echo "Quick Tips:" >> motd
+++	@echo " - Use Tab to auto-complete commands and filenames" >> motd
+++	@echo " - Use Up/Down arrows to cycle through command history" >> motd
+++	@echo " - Press Ctrl+C to stop a running command" >> motd
+++	@echo " - Press Ctrl+L to clear the screen" >> motd
+++	@echo "" >> motd
+++	@echo "Learn more:" >> motd
+++	@echo " - Terminal basics:    https://ubuntu.com/tutorials/command-line-for-beginners" >> motd
+++	@echo " - Package management: https://help.ubuntu.com/community/AptGet/Howto" >> motd
++ 	@echo "" >> motd
++-	@echo "Report issues at https://termux.dev/issues" >> motd
+++	@echo "Report issues at https://github.com/appdevforall/CodeOnTheGo/issues" >> motd
++diff --git a/motds/motd.sh.in b/motds/motd.sh.in
++index 1a76844..2ec943d 100644
++--- a/motds/motd.sh.in
+++++ b/motds/motd.sh.in
++@@ -4,58 +4,34 @@
++ source "@TERMUX_PREFIX@/bin/termux-setup-package-manager" || exit 1
++ 
++ terminal_width="$(stty size | cut -d" " -f2)"
++-if [[ "$terminal_width" =~ ^[0-9]+$ ]] && [ "$terminal_width" -gt 60 ]; then
++-
++-    motd="
++- \e[47m                \e[0m  \e[1mWelcome to Termux!\e[0m
++- \e[47m  \e[0m            \e[0;37m\e[47m .\e[0m
++- \e[47m  \e[0m  \e[47m  \e[0m        \e[47m  \e[0m  \e[1mDocs:\e[0m      \e[4mhttps://termux.dev/docs\e[0m
++- \e[47m  \e[0m  \e[47m  \e[0m        \e[47m  \e[0m  \e[1mDonate:\e[0m    \e[4mhttps://termux.dev/donate\e[0m
++- \e[47m  \e[0m            \e[47m  \e[0m  \e[1mCommunity:\e[0m \e[4mhttps://termux.dev/community\e[0m
++- \e[47m  \e[0m            \e[0;37m\e[47m .\e[0m
++- \e[47m                \e[0m  \e[1mTermux version:\e[0m ${TERMUX_VERSION-Unknown}
++-"
+++motd="
+++\e[1mWelcome to Code on the Go Terminal!\e[0m
++ 
++-    motd_indent="                   "
+++\e[1mHere's what you need to know:\e[0m
+++ - Type '\e[1mls\e[0m' to see files and folders
+++ - Type '\e[1mpwd\e[0m' to see where you are
+++ - Type '\e[1mcd <folder>\e[0m' to enter a folder
+++ - Type '\e[1mcd ..\e[0m' to go back one folder
+++ - Type '\e[1mexit\e[0m' to leave the terminal
++ 
++-else
+++\e[1mNeed help with any command?\e[0m Type '\e[1mman <command>\e[0m' or '\e[1m<command> --help\e[0m'
++ 
++-    motd="
++-\e[1mWelcome to Termux!\e[0m
+++\e[1mWorking with packages:\e[0m
+++\e[1m - Search :\e[0m  apt-get search <query>
+++\e[1m - Install:\e[0m  apt-get install <package>
+++\e[1m - Upgrade:\e[0m  apt-get update && apt-get upgrade
++ 
++-\e[1mDocs:\e[0m      \e[4mhttps://termux.dev/docs\e[0m
++-\e[1mDonate:\e[0m    \e[4mhttps://termux.dev/donate\e[0m
++-\e[1mCommunity:\e[0m \e[4mhttps://termux.dev/community\e[0m
+++\e[1mQuick Tips:\e[0m
+++ - Use \e[1mTab\e[0m to auto-complete commands and filenames
+++ - Use \e[1mUp/Down arrows\e[0m to cycle through command history
+++ - Press \e[1mCtrl+C\e[0m to stop a running command
+++ - Press \e[1mCtrl+L\e[0m to clear the screen
++ 
++-\e[1mTermux version:\e[0m ${TERMUX_VERSION-Unknown}
++-"
+++\e[1mLearn more:\e[0m
+++ - Terminal basics:     \e[4mhttps://ubuntu.com/tutorials/command-line-for-beginners\e[0m
+++ - Package management:  \e[4mhttps://help.ubuntu.com/community/AptGet/Howto\e[0m
++ 
++-    motd_indent=""
++-fi
+++\e[1mReport issues at\e[0m \e[4mhttps://github.com/appdevforall/CodeOnTheGo/issues\e[0m
++ 
++-motd+="
++-${motd_indent}\e[1mWorking with packages:\e[0m
++-${motd_indent}\e[1mSearch:\e[0m  pkg search <query>
++-${motd_indent}\e[1mInstall:\e[0m pkg install <package>
++-${motd_indent}\e[1mUpgrade:\e[0m pkg upgrade
++ "
++-
++-
++-if [ "$TERMUX_APP_PACKAGE_MANAGER" = "apt" ]; then
++-
++-    motd+="
++-${motd_indent}\e[1mSubscribing to additional repos:\e[0m
++-${motd_indent}\e[1mRoot:\e[0m pkg install root-repo
++-${motd_indent}\e[1mX11:\e[0m  pkg install x11-repo
++-
++-${motd_indent}For fixing any repository issues,
++-${motd_indent}try 'termux-change-repo' command.
++-"
++-
++-fi
++-
++-motd+="
++-${motd_indent}Report issues at \e[4mhttps://termux.dev/issues\e[0m
++-"
++-
++-echo -e "$motd"
+++echo -e "$motd"
++\ No newline at end of file

@@ -48,6 +48,9 @@ declare -a PATCHES=(
     # Update mirror configurations
     "termux-tools-mirrors.patch"
 
+    # Update motd
+    "termux-tools-motd.patch"
+
     # Makes some of the packages depend on and link against libandroid-shmem.so
     # Required to fix some build failures
     "make-libdb-depend-on-android-shmem.patch"
