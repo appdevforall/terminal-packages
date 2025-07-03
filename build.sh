@@ -45,6 +45,9 @@ declare -a PATCHES=(
     # Adds our own GPG keys
     "termux-keyring.patch"
 
+    # Update mirror configurations
+    "termux-tools-mirrors.patch"
+
     # Makes some of the packages depend on and link against libandroid-shmem.so
     # Required to fix some build failures
     "make-libdb-depend-on-android-shmem.patch"
