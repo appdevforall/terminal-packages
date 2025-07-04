@@ -97,8 +97,11 @@ setup_termux_packages() {
 
     if ! [[ -d "$TERMUX_PACKAGES_DIR" ]]; then
         echo "Cloning termux-packages..."
-        git clone -b "$TERMUX_PACKAGES_VERSION" --depth=1 "$TERMUX_PACKAGES_REPO" "$TERMUX_PACKAGES_DIR" ||\
+        git clone "$TERMUX_PACKAGES_REPO" "$TERMUX_PACKAGES_DIR" ||\
             scribe_error_exit "Failed to clone termux-packages"
+
+        git checkout "$TERMUX_PACKAGES_VERSION" ||
+            scribe_error_exit "Unable to checkout revision '$TERMUX_PACKAGES_VERSION' of termux-packages."
     fi
 
     pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
