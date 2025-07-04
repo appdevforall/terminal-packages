@@ -59,6 +59,10 @@ declare -a PATCHES=(
 
     # libxml2 v2.14.4 has build errors
     "revert-libxml2-to-2.14.3.patch"
+
+    # subversion fails to compile, complaining that the `apr.h` and other headers
+    # could not be found. These headers are located in $PREFIX/include/apr-1
+    "subversion-missing-apr-includes.patch"
 )
 
 # Script configuration
