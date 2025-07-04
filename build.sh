@@ -215,7 +215,6 @@ if [[ "$SCRIBE_EXPLICIT" != "true" ]]; then
         # Core utilities.
         "apt"
         "bash"
-        "command-not-found"
         "coreutils"
         "dash"
         "diffutils"
