@@ -26,7 +26,7 @@ script_dir=$(dirname "$script")
 . "$script_dir/utils.sh"
 
 TERMUX_PACKAGES_REPO="https://github.com/termux/termux-packages.git"
-TERMUX_PACKAGES_VERSION="bootstrap-2025.06.29-r1+apt.android-7"
+TERMUX_PACKAGES_VERSION="5e933f99767e9ccef663bceeb54d28b1cb243d4f"
 TERMUX_PACKAGES_DIR="$script_dir/termux-packages"
 TERMUX_PACKAGE_NAME="com.termux"
 
