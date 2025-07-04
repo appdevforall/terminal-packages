@@ -61,6 +61,10 @@ declare -a PATCHES=(
 
     # libxml2 v2.14.4 has build errors
     "revert-libxml2-to-2.14.3.patch"
+
+    # Remove 'scalar' binary from $PREFIX/bin and make it a symlink
+    # to $PREFIX/libexec/git-core/scalar
+    "git-symlink-scalar.patch"
 )
 
 # Script configuration
