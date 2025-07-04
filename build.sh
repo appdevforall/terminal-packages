@@ -2,19 +2,21 @@
 
 #
 # Copyright (C) 2025 Akash Yadav
+# 
+# This file is part of The Scribe Project.
 #
-# This program is free software: you can redistribute it and/or modify
+# Scribe is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful,
+# Scribe is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# along with Scribe.  If not, see <https://www.gnu.org/licenses/>.
 #
 
 set -euo pipefail
@@ -25,7 +27,6 @@ script_dir=$(dirname "$script")
 # shellcheck source=utils.sh
 . "$script_dir/utils.sh"
 
-TERMUX_PACKAGES_REPO="https://github.com/termux/termux-packages.git"
 TERMUX_PACKAGES_DIR="$script_dir/termux-packages"
 TERMUX_PACKAGE_NAME="com.termux"
 
@@ -65,6 +66,10 @@ declare -a PATCHES=(
     # Remove 'scalar' binary from $PREFIX/bin and make it a symlink
     # to $PREFIX/libexec/git-core/scalar
     "git-symlink-scalar.patch"
+
+    # subversion fails to compile, complaining that the `apr.h` and other headers
+    # could not be found. These headers are located in $PREFIX/include/apr-1
+    "subversion-missing-apr-includes.patch"
 )
 
 # Script configuration
@@ -217,7 +222,6 @@ if [[ "$SCRIBE_EXPLICIT" != "true" ]]; then
         # Core utilities.
         "apt"
         "bash"
-        "command-not-found"
         "coreutils"
         "dash"
         "diffutils"
