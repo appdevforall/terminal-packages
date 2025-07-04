@@ -82,7 +82,7 @@ publish-packages:
 
     # Update apt-repository
     # usage: termux-apt-repo [-h] [--use-hard-links] [-s] input output [dist] [comp]
-    ./termux-apt-repo output/debs scribe-packages-repo stable main
+    bash ./termux-apt-repo output/debs scribe-packages-repo stable main
 
     # Sign APT repository
     echo "$PACKAGES_GPG_KEY_PASS" |\
