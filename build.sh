@@ -26,8 +26,6 @@ script_dir=$(dirname "$script")
 . "$script_dir/utils.sh"
 
 TERMUX_PACKAGES_REPO="https://github.com/termux/termux-packages.git"
-TERMUX_PACKAGES_BRANCH="master"
-TERMUX_PACKAGES_REVISION="5e933f99767e9ccef663bceeb54d28b1cb243d4f"
 TERMUX_PACKAGES_DIR="$script_dir/termux-packages"
 TERMUX_PACKAGE_NAME="com.termux"
 
@@ -92,22 +90,6 @@ sed_escape() {
 }
 
 setup_termux_packages() {
-    if [[ -e "$TERMUX_PACKAGES_DIR" ]] && ! [[ -d "$TERMUX_PACKAGES_DIR" ]]; then
-        scribe_error_exit "${TERMUX_PACKAGES_DIR} already exists and is not a directory."
-    fi
-
-    if ! [[ -d "$TERMUX_PACKAGES_DIR" ]]; then
-        echo "Cloning termux-packages..."
-        git clone --depth=1 -b "$TERMUX_PACKAGES_BRANCH" "$TERMUX_PACKAGES_REPO" "$TERMUX_PACKAGES_DIR" ||\
-            scribe_error_exit "Failed to clone termux-packages"
-
-        if [[ -n "$TERMUX_PACKAGES_REVISION" ]]; then
-            echo "Checking out revision '$TERMUX_PACKAGES_REVISION' of termux-packages..."
-            git checkout "$TERMUX_PACKAGES_REVISION" ||
-                scribe_error_exit "Unable to checkout revision '$TERMUX_PACKAGES_REVISION' of termux-packages."
-        fi
-    fi
-
     pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
 
     # Change package name
