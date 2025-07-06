@@ -2,7 +2,7 @@
 
 #
 # Copyright (C) 2025 Akash Yadav
-# 
+#
 # This file is part of The Scribe Project.
 #
 # Scribe is free software: you can redistribute it and/or modify
@@ -63,6 +63,11 @@ declare -a PATCHES=(
     # subversion fails to compile, complaining that the `apr.h` and other headers
     # could not be found. These headers are located in $PREFIX/include/apr-1
     "subversion-missing-apr-includes.patch"
+
+    # libuv has missing sources in their Makefile configuration
+    # This missing source issue was fixed in their CMake configuration
+    # So we force termux-packages to build using CMake instead of Makefile
+    "libuv-force-cmake-build.patch"
 )
 
 # Script configuration
