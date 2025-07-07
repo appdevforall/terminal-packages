@@ -1,0 +1,89 @@
+diff --git a/scripts/generate-bootstraps.sh b/scripts/generate-bootstraps.sh
+index 825f2a886e..c1135eded4 100755
+--- a/scripts/generate-bootstraps.sh
++++ b/scripts/generate-bootstraps.sh
+@@ -280,6 +280,7 @@ add_termux_bootstrap_second_stage_files() {
+ # Information about symlinks is stored in file SYMLINKS.txt.
+ create_bootstrap_archive() {
+ 	echo "[*] Creating 'bootstrap-${1}.zip'..."
++	bszip="${BOOTSTRAP_TMPDIR}/bootstrap-${1}.zip"
+ 	(cd "${BOOTSTRAP_ROOTFS}/${TERMUX_PREFIX}"
+ 		# Do not store symlinks in bootstrap archive.
+ 		# Instead, put all information to SYMLINKS.txt
+@@ -288,13 +289,47 @@ create_bootstrap_archive() {
+ 			rm -f "$link"
+ 		done < <(find . -type l -print0)
+ 
+-		zip -r9 "${BOOTSTRAP_TMPDIR}/bootstrap-${1}.zip" ./*
++		# Find and repack all ZIP files without compression
++		while read -r -d '' archive; do
++			repack_zip "$(realpath "$archive")"
++		done < <(find . -type f -name \*.zip -print0)
++
++		# Strip all binary files
++		find . -type f -exec hexdump -n 4 -e '4/1 "%2x" " {}\n"'  {} \; |\
++			grep ^7f454c46 |\
++			cut -d' ' -f2- |\
++			xargs -L1 "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
++
++		# Remove demos from JDK
++		rm -vrf ./lib/jvm/java-*-openjdk/demo
++
++		# Create bootstrap ZIP file without compression
++		zip -r0 "$bszip" ./*
+ 	)
+ 
+-	mv -f "${BOOTSTRAP_TMPDIR}/bootstrap-${1}.zip" ./
++	# Compress everything with brotli and max compression
++	echo "[*] Compressing with brotli..."
++	brotli -q 11 -o "$bszip.br" "$bszip"
++
++	mv -f $bszip* ./
+ 	echo "[*] Finished successfully (${1})."
+ }
+ 
++repack_zip() {
++	input="$1"
++
++	echo "Repacking $input"
++
++	local temp
++	temp=$(mktemp -d)
++
++	(cd "$temp"
++		unzip "$input"
++		zip -r0 "$input" ./*
++		rm -vf "$input"
++	)
++}
++
+ show_usage() {
+ 	echo
+ 	echo "Usage: generate-bootstraps.sh [options]"
+@@ -452,9 +487,7 @@ for package_arch in "${TERMUX_ARCHITECTURES[@]}"; do
+ 	# Core utilities.
+ 	pull_package bash # Used by `termux-bootstrap-second-stage.sh`
+ 	pull_package bzip2
+-	if ! ${BOOTSTRAP_ANDROID10_COMPATIBLE}; then
+-		pull_package command-not-found
+-	else
++	if ${BOOTSTRAP_ANDROID10_COMPATIBLE}; then
+ 		pull_package proot
+ 	fi
+ 	pull_package coreutils
+@@ -496,9 +529,15 @@ for package_arch in "${TERMUX_ARCHITECTURES[@]}"; do
+ 	done
+ 	unset add_pkg
+ 
++	# Packages for CoGo
++	pull_package git
++	pull_package openjdk-21
++	pull_package termux-auth
++
+ 	# Add termux bootstrap second stage files
+ 	add_termux_bootstrap_second_stage_files "$package_arch"
+ 
+ 	# Create bootstrap archive.
+ 	create_bootstrap_archive "$package_arch"
+ done
++
