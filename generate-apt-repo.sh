@@ -69,4 +69,3 @@ termux-apt-repo --use-hard-links "$debs_dir" "$repo_dir" stable main ||\
 
 # Clean
 rm -rf "$debs_dir"
-rm -rf "$repo_dir"
