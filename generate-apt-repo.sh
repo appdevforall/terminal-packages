@@ -2,7 +2,7 @@
 
 #
 # Copyright (C) 2025 Akash Yadav
-# 
+#
 # This file is part of The Scribe Project.
 #
 # Scribe is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@ script_dir=$(dirname "$script")
 # Supported architectures
 declare -a ARCHS=(
     "aarch64"
-    "x86_64"
+    "arm"
 )
 
 termux_packages="$script_dir/termux-packages"
@@ -54,7 +54,8 @@ mkdir -p "$repo_dir"
 
 # Add symlinks to deb files to the repo dir
 for arch in "${ARCHS[@]}"; do
-    find "$output_dir/$arch/debs"\
+    find "$output_dir/$arch"\
+        -mindepth 1\
         -maxdepth 1\
         -type f\
         -name "*.deb"\
@@ -65,12 +66,6 @@ done
 # Generate APT repository
 termux-apt-repo --use-hard-links "$debs_dir" "$repo_dir" stable main ||\
     scribe_error_exit "Failed to create local API repository"
-
-# Generate bootstrap packages
-"$termux_packages/scripts/generate-bootstraps.sh"\
-    --architectures "$(IFS=, ; echo "${ARCHS[*]}")"\
-    -r "file://$(realpath "$repo_dir")" ||\
-    scribe_error_exit "Failed to generate bootstrap packages"
 
 # Clean
 rm -rf "$debs_dir"
