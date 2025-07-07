@@ -53,15 +53,15 @@ declare -a PATCHES=(
 
     # Makes some of the packages depend on and link against libandroid-shmem.so
     # Required to fix some build failures
-    "make-libdb-depend-on-android-shmem.patch"
-    "make-libunbound-depend-on-android-shmem.patch"
-    "make-libx11-depend-on-android-shmem.patch"
+    "libdb-depend-on-android-shmem.patch"
+    "libunbound-depend-on-android-shmem.patch"
+    "libx11-depend-on-android-shmem.patch"
 
     # Fix dependencies in binutils-libs
-    "fix-binutils-libs-dependencies.patch"
+    "binutils-libs-fix-dependencies.patch"
 
     # libxml2 v2.14.4 has build errors
-    "revert-libxml2-to-2.14.3.patch"
+    "libxml2-revert-to-2.14.3.patch"
 
     # Remove 'scalar' binary from $PREFIX/bin and make it a symlink
     # to $PREFIX/libexec/git-core/scalar
