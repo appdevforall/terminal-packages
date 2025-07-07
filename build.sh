@@ -50,15 +50,15 @@ declare -a PATCHES=(
 
     # Makes some of the packages depend on and link against libandroid-shmem.so
     # Required to fix some build failures
-    "make-libdb-depend-on-android-shmem.patch"
-    "make-libunbound-depend-on-android-shmem.patch"
-    "make-libx11-depend-on-android-shmem.patch"
+    "libdb-depend-on-android-shmem.patch"
+    "libunbound-depend-on-android-shmem.patch"
+    "libx11-depend-on-android-shmem.patch"
 
     # Fix dependencies in binutils-libs
-    "fix-binutils-libs-dependencies.patch"
+    "binutils-libs-fix-dependencies.patch"
 
     # libxml2 v2.14.4 has build errors
-    "revert-libxml2-to-2.14.3.patch"
+    "libxml2-revert-to-2.14.3.patch"
 
     # subversion fails to compile, complaining that the `apr.h` and other headers
     # could not be found. These headers are located in $PREFIX/include/apr-1
