@@ -75,6 +75,10 @@ declare -a PATCHES=(
     # This missing source issue was fixed in their CMake configuration
     # So we force termux-packages to build using CMake instead of Makefile
     "libuv-force-cmake-build.patch"
+
+    # Perform cleanup in OpenJDK packages
+    "openjdk-21-cleanup.patch"
+    "openjdk-17-cleanup.patch"
 )
 
 # Script configuration
