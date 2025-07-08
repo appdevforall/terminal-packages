@@ -68,6 +68,9 @@ declare -a PATCHES=(
     # This missing source issue was fixed in their CMake configuration
     # So we force termux-packages to build using CMake instead of Makefile
     "libuv-force-cmake-build.patch"
+
+    # Update package name in termux-tools
+    "termux-tools-update-package-name.patch"
 )
 
 # Script configuration

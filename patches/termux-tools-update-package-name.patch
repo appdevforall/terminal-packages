@@ -1,0 +1,12 @@
+diff --git a/packages/termux-tools/build.sh b/packages/termux-tools/build.sh
+index 7f1c655712..bf6592804c 100644
+--- a/packages/termux-tools/build.sh
++++ b/packages/termux-tools/build.sh
+@@ -21,6 +21,7 @@ TERMUX_PKG_DEPENDS="bzip2, coreutils, curl, dash, diffutils, findutils, gawk, gr
+ TERMUX_PKG_RECOMMENDS="ed, dos2unix, inetutils, net-tools, patch, unzip"
+ 
+ termux_step_pre_configure() {
++	sed -i 's/com.termux/com.itsaky.androidide/g' configure.ac
+ 	autoreconf -vfi
+ }
+ 
