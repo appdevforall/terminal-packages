@@ -80,6 +80,9 @@ declare -a PATCHES=(
     # This also handles the process of creating a brotli archive
     # from the generated ZIP archive
     "scripts-generate-bootstraps-CoGo-changes.patch"
+
+    # Update package name in termux-tools
+    "termux-tools-update-package-name.patch"
 )
 
 # Script configuration
