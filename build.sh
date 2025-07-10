@@ -126,7 +126,7 @@ setup_termux_packages() {
 
     # Create termux-tools-update-package-name.patch
     termux_tools_update_package_name_patch="$script_dir/patches/termux-tools-update-package-name.patch"
-    sed "s|@TERMUX_PACKAGE_NAME@|$TERMUX_PACKAGE_NAME|g" "${termux_tools_update_package_name_patch}.in" > "${termux_tools_update_package_name_patch}"
+    sed "s|@TERMUX_PACKAGE_NAME@|$SCRIBE_PACKAGE_NAME|g" "${termux_tools_update_package_name_patch}.in" > "${termux_tools_update_package_name_patch}"
 
     # Apply patches
     for patch in "${PATCHES[@]}"; do
