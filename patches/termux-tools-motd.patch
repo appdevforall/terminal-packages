@@ -29,7 +29,7 @@ index 0000000..8b2e358
 ++	@echo "Need help with any command? Type 'man <command>' or '<command> --help'" >> motd
 + 	@echo "" >> motd
 + 	@echo "Working with packages:" >> motd
-++	@echo " - Search :  apt-get search <query>" >> motd
+++	@echo " - Search :  apt search <query>" >> motd
 ++	@echo " - Install:  apt-get install <package>" >> motd
 ++	@echo " - Upgrade:  apt-get update && apt-get upgrade" >> motd
 + 	@echo "" >> motd
@@ -96,7 +96,7 @@ index 0000000..8b2e358
 +-    motd="
 +-\e[1mWelcome to Termux!\e[0m
 ++\e[1mWorking with packages:\e[0m
-++\e[1m - Search :\e[0m  apt-get search <query>
+++\e[1m - Search :\e[0m  apt search <query>
 ++\e[1m - Install:\e[0m  apt-get install <package>
 ++\e[1m - Upgrade:\e[0m  apt-get update && apt-get upgrade
 + 
