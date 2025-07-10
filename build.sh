@@ -124,6 +124,10 @@ setup_termux_packages() {
     termux_keyring_patch="$script_dir/patches/termux-keyring.patch"
     sed "s|@SCRIBE_GPG_KEY@|$(basename "$SCRIBE_GPG_KEY")|g" "${termux_keyring_patch}.in" > "$termux_keyring_patch"
 
+    # Create termux-tools-update-package-name.patch
+    termux_tools_update_package_name_patch="$script_dir/patches/termux-tools-update-package-name.patch"
+    sed "s|@TERMUX_PACKAGE_NAME@|$TERMUX_PACKAGE_NAME|g" "${termux_tools_update_package_name_patch}.in" > "${termux_tools_update_package_name_patch}"
+
     # Apply patches
     for patch in "${PATCHES[@]}"; do
         if patch -p1 --no-backup-if-mismatch<"$script_dir/patches/$patch" ||\

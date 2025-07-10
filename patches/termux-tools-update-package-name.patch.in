@@ -6,7 +6,7 @@ index 7f1c655712..bf6592804c 100644
  TERMUX_PKG_RECOMMENDS="ed, dos2unix, inetutils, net-tools, patch, unzip"
  
  termux_step_pre_configure() {
-+	sed -i 's/com.termux/com.itsaky.androidide/g' configure.ac
++	sed -i 's/com.termux/@TERMUX_PACKAGE_NAME@/g' configure.ac
  	autoreconf -vfi
  }
  
