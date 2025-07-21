@@ -1,5 +1,5 @@
 diff --git a/scripts/generate-bootstraps.sh b/scripts/generate-bootstraps.sh
-index 825f2a886e..aa56498603 100755
+index 825f2a886e..7153ff6cfb 100755
 --- a/scripts/generate-bootstraps.sh
 +++ b/scripts/generate-bootstraps.sh
 @@ -280,6 +280,7 @@ add_termux_bootstrap_second_stage_files() {
@@ -10,23 +10,57 @@ index 825f2a886e..aa56498603 100755
  	(cd "${BOOTSTRAP_ROOTFS}/${TERMUX_PREFIX}"
  		# Do not store symlinks in bootstrap archive.
  		# Instead, put all information to SYMLINKS.txt
-@@ -288,13 +289,39 @@ create_bootstrap_archive() {
+@@ -288,13 +289,73 @@ create_bootstrap_archive() {
  			rm -f "$link"
  		done < <(find . -type l -print0)
  
 -		zip -r9 "${BOOTSTRAP_TMPDIR}/bootstrap-${1}.zip" ./*
++		# Find and repack all ZIP files with no compression
++		echo "[*] Repacking ZIP files"
++		while read -r -d '' zip; do
++			repack_zip "$(realpath "$zip")"
++		done < <(find . -type f -name \*.zip -print0)
++
++		# Repack ct.sym in JDKs
++		echo "[*] Repacking ct.sym"
++		for jdk in 17 21; do
++			dir="./lib/jvm/java-$jdk-openjdk"
++			ctsym="$dir/lib/ct.sym"
++			if ! [[ -f "$ctsym" ]]; then
++				# Doesn't exist; continue
++				echo "[!] JDK $jdk - ct.sym doesn't exist!"
++				continue
++			fi
++
++			ctsym="$(realpath "$ctsym")"
++
++			local temp
++			temp=$(mktemp -d)
++			(cd "$temp"
++				unzip -qq "$ctsym"
++				rm "$ctsym"
++				zip -qr0 "ct.sym" ./*
++				brotli -Zo "$ctsym" ct.sym
++				ls -hal "$ctsym"
++				rm ct.sym
++			) && rm -rf "$temp" && echo "[*] JDK $jdk - ct.sym repacked"
++		done
++
 +		# Strip all binary files
++		echo "[*] Stripping binaries"
 +		find . -type f -exec hexdump -n 4 -e '4/1 "%2x" " {}\n"'  {} \; |\
 +			grep ^7f454c46 |\
 +			cut -d' ' -f2- |\
 +			xargs -L1 "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
 +
 +		# Remove demos from JDK
-+		rm -vrf ./lib/jvm/java-*-openjdk/demo
++		echo "[*] Removing demo files in JDKs"
++		rm -rf ./lib/jvm/java-*-openjdk/demo
 +
 +		# Create bootstrap ZIP file without compression
-+		zip -r0 "$bszip" ./*
-+		zip -r9 "$bszip.9" ./*
++		echo "[*] Creating bootstrap archives"
++		zip -qr0 "$bszip" ./*
++		zip -qr9 "$bszip.9" ./*
  	)
  
 -	mv -f "${BOOTSTRAP_TMPDIR}/bootstrap-${1}.zip" ./
@@ -43,16 +77,16 @@ index 825f2a886e..aa56498603 100755
 +	temp=$(mktemp -d)
 +
 +	(cd "$temp"
-+		unzip "$input"
-+		zip -r0 "$input" ./*
-+		rm -vf "$input"
++		unzip -qq "$input"
++		rm "$input"
++		zip -qr0 "$input" ./*
 +	)
 +}
 +
  show_usage() {
  	echo
  	echo "Usage: generate-bootstraps.sh [options]"
-@@ -452,9 +479,7 @@ for package_arch in "${TERMUX_ARCHITECTURES[@]}"; do
+@@ -452,9 +513,7 @@ for package_arch in "${TERMUX_ARCHITECTURES[@]}"; do
  	# Core utilities.
  	pull_package bash # Used by `termux-bootstrap-second-stage.sh`
  	pull_package bzip2
@@ -63,21 +97,25 @@ index 825f2a886e..aa56498603 100755
  		pull_package proot
  	fi
  	pull_package coreutils
-@@ -496,9 +521,22 @@ for package_arch in "${TERMUX_ARCHITECTURES[@]}"; do
+@@ -496,9 +555,26 @@ for package_arch in "${TERMUX_ARCHITECTURES[@]}"; do
  	done
  	unset add_pkg
  
-+	# Packages for CoGo
++	# Packages for CoGo -- debug-only
 +	pull_package file
-+	pull_package zip
 +	pull_package python
 +	pull_package sqlite
 +	pull_package coreutils
 +	pull_package binutils
++	pull_package vim
++	pull_package which
++
++	# Packages for CoGo -- debug/release
++	pull_package brotli
 +	pull_package git
 +	pull_package mandoc
 +	pull_package openjdk-21
-+	pull_package vim
++	pull_package zip
 +
  	# Add termux bootstrap second stage files
  	add_termux_bootstrap_second_stage_files "$package_arch"
