@@ -1,193 +1,1037 @@
-diff --git a/packages/termux-tools/0001-remove-mirror-related-scripts.patch b/packages/termux-tools/0001-remove-mirror-related-scripts.patch
-new file mode 100644
-index 0000000..b4daf45
---- /dev/null
-+++ b/packages/termux-tools/0001-remove-mirror-related-scripts.patch
-@@ -0,0 +1,26 @@
-+diff --git a/scripts/Makefile.am b/scripts/Makefile.am
-+index 34d0fde..5533beb 100644
-+--- a/scripts/Makefile.am
-++++ b/scripts/Makefile.am
-+@@ -17,8 +17,8 @@
-+ # <https://www.gnu.org/licenses/>.
-+ 
-+ # shell scripts:
-+-bin_SCRIPTS = chsh dalvikvm login pkg su termux-backup			\
-+-termux-change-repo termux-fix-shebang termux-info termux-open		\
-++bin_SCRIPTS = chsh dalvikvm login su termux-backup			\
-++termux-fix-shebang termux-info termux-open		\
-+ termux-open-url termux-reload-settings termux-reset termux-restore	\
-+ termux-setup-package-manager termux-setup-storage termux-wake-lock	\
-+ termux-wake-unlock
-+@@ -64,10 +64,8 @@ install-exec-hook:
-+ $(eval $(call tool-rule,chsh))
-+ $(eval $(call tool-rule,dalvikvm))
-+ $(eval $(call tool-rule,login))
-+-$(eval $(call tool-rule,pkg))
-+ $(eval $(call tool-rule,su))
-+ $(eval $(call tool-rule,termux-backup))
-+-$(eval $(call tool-rule,termux-change-repo))
-+ $(eval $(call tool-rule,termux-fix-shebang))
-+ $(eval $(call tool-rule,termux-info))
-+ $(eval $(call tool-rule,termux-open))
-diff --git a/packages/termux-tools/0002-remove-mirrors.patch b/packages/termux-tools/0002-remove-mirrors.patch
-new file mode 100644
-index 0000000..0273869
---- /dev/null
-+++ b/packages/termux-tools/0002-remove-mirrors.patch
-@@ -0,0 +1,155 @@
-+diff --git a/mirrors/Makefile.am b/mirrors/Makefile.am
-+index 46163db..5653b91 100644
-+--- a/mirrors/Makefile.am
-++++ b/mirrors/Makefile.am
-+@@ -1,121 +1,6 @@
-+ # Default mirrors
-+ pkgdata_MIRRORS = default
-+ 
-+-# Mirrors in Asia (excl. Chinese_Mainland and Russia)
-+-pkgdata_ASIA_MIRRORS = mirror.albony.in mirror.bardia.tech          \
-+-mirrors.cbrx.io linux.domainesia.com mirror.nevacloud.com            \
-+-mirror.textcord.xyz tmx.xvx.my.id  mirrors.nguyenhoang.cloud         \
-+-mirror.freedif.org mirror.twds.com.tw mirrors.in.sahilister.net       \
-+-mirrors.saswata.cc termux.niranjan.co mirrors.ravidwivedi.in          \
-+-mirror.jeonnam.school mirror.rinarin.dev mirrors.krnk.org             \
-+-mirror.meowsmp.net 
-+-
-+-# Mirrors in Chinese Mainland
-+-pkgdata_CHINESE_MAINLAND_MIRRORS = mirrors.tuna.tsinghua.edu.cn      \
-+-mirror.iscas.ac.cn mirrors.nju.edu.cn mirrors.pku.edu.cn             \
-+-mirrors.ustc.edu.cn mirrors.bfsu.edu.cn	mirrors.aliyun.com           \
-+-mirrors.cqupt.edu.cn mirror.nyist.edu.cn mirrors.sau.edu.cn	         \
-+-mirrors.sdu.edu.cn mirrors.sustech.edu.cn mirrors.zju.edu.cn         \
-+-mirror.sjtu.edu.cn mirrors.hust.edu.cn mirrors.cernet.edu.cn
-+-
-+-# Mirrors in Europe
-+-pkgdata_EUROPE_MIRRORS = grimler.se mirror.termux.dev			\
-+-packages.termux.dev termux.librehat.com mirror.mwt.me			\
-+-termux.mentality.rip mirrors.de.sahilister.net termux.cdn.lumito.net	\
-+-termux.3san.dev mirror.accum.se			\
-+-md.mirrors.hacktegic.com ftp.fau.de is.mirror.flokinet.net		\
-+-ro.mirror.flokinet.net mirrors.medzik.dev mirrors.cfe.re		\
-+-mirror.sunred.org mirror.autkin.net mirror.bouwhuis.network		\
-+-mirror.leitecastro.com ftp.agdsn.de mirror.polido.pt			\
-+-nl.mirror.flokinet.net
-+-
-+-# Mirrors in North America
-+-pkgdata_NORTH_AMERICA_MIRRORS = plug-mirror.rcac.purdue.edu          \
-+-dl.kcubeterm.com mirrors.utermux.dev mirror.fcix.net mirror.mwt.me   \
-+-mirror.vern.cc mirror.csclub.uwaterloo.ca mirror.quantum5.ca		 \
-+-termux.danyael.xyz gnlug.org
-+-
-+-# Mirrors in Oceania
-+-pkgdata_OCEANIA_MIRRORS = mirrors.middlendian.com
-+-
-+-# Mirrors in Russia
-+-pkgdata_RUSSIA_MIRRORS = mirror.mephi.ru repository.su
-+-
-+-
-+-# Removed, renamed or moved mirrors
-+-# Mirrors files are marked as conffiles and they are manually deleted
-+-# in preinst step of package upgrade as conffiles removed in a newer
-+-# version of the package are only deleted if package is purged and
-+-# would otherwise be left as is after package upgrades and would still
-+-# get used during mirror selection.
-+-pkgdata_MIRRORS_REMOVED = \
-+-asia/packages.nscdn.top \
-+-china/mirrors.dgut.edu.cn \
-+-china/mirrors.hit.edu.cn \
-+-china/mirrors.njupt.edu.cn \
-+-china/mirrors.scau.edu.cn \
-+-china/mirror.iscas.ac.cn \
-+-china/mirror.nyist.edu.cn \
-+-china/mirror.sjtu.edu.cn \
-+-china/mirrors.aliyun.com \
-+-china/mirrors.bfsu.edu.cn \
-+-china/mirrors.cqupt.edu.cn \
-+-china/mirrors.nju.edu.cn \
-+-china/mirrors.pku.edu.cn \
-+-china/mirrors.qvq.net.cn \
-+-china/mirrors.sau.edu.cn \
-+-china/mirrors.sdu.edu.cn \
-+-china/mirrors.sustech.edu.cn \
-+-china/mirrors.tuna.tsinghua.edu.cn \
-+-china/mirrors.ustc.edu.cn \
-+-china/mirrors.zju.edu.cn \
-+-chinese_mainland/mirrors.qvq.net.cn \
-+-europe/cdn.lumito.net \
-+-europe/mirror.termux.dv \
-+-europe/termux.sahilister.in \
-+-europe/termux.astra.in.ua \
-+-north_america/packages.termux.dev \
-+-oceania/mirrors.wale.id.au \
-+-russia/mirror.surf \
-+-south_america/mirrors.rda.run \
-+-asia/mirrors.saswata.xyz \
-+-asia/mirrors.omsinchan.ac.th
-+-
-+-
-+-
-+-define install-mirror-rule
-+-install-$1:
-+-	$$(MKDIR_P) $$(DESTDIR)$$(sysconfdir)/termux/mirrors/$1
-+-	for f in $$(pkgdata_$2_MIRRORS); do \
-+-		$(INSTALL) -m 644 $(srcdir)/$1/$$$$f \
-+-		$(DESTDIR)$(sysconfdir)/termux/mirrors/$1; \
-+-	done
-+-endef
-+-
-+-define uninstall-mirror-rule
-+-uninstall-$1:
-+-	for f in $$(pkgdata_$2_MIRRORS); do \
-+-		rm -f $(DESTDIR)$(sysconfdir)/termux/mirrors/$1/$$$$f; \
-+-	done
-+-	-rmdir $(DESTDIR)$(sysconfdir)/termux/mirrors/$1
-+-endef
-+-
-+-$(eval $(call install-mirror-rule,asia,ASIA))
-+-$(eval $(call install-mirror-rule,chinese_mainland,CHINESE_MAINLAND))
-+-$(eval $(call install-mirror-rule,europe,EUROPE))
-+-$(eval $(call install-mirror-rule,north_america,NORTH_AMERICA))
-+-$(eval $(call install-mirror-rule,oceania,OCEANIA))
-+-$(eval $(call install-mirror-rule,russia,RUSSIA))
-+-
-+-$(eval $(call uninstall-mirror-rule,asia,ASIA))
-+-$(eval $(call uninstall-mirror-rule,chinese_mainland,CHINESE_MAINLAND))
-+-$(eval $(call uninstall-mirror-rule,europe,EUROPE))
-+-$(eval $(call uninstall-mirror-rule,north_america,NORTH_AMERICA))
-+-$(eval $(call uninstall-mirror-rule,oceania,OCEANIA))
-+-$(eval $(call uninstall-mirror-rule,russia,RUSSIA))
-+-
-+-
-+-
-+ install-default: $(pkgdata_MIRRORS)
-+ 	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/termux/mirrors
-+ 	for f in $(pkgdata_MIRRORS); do \
-+@@ -129,25 +14,14 @@ uninstall-default:
-+ 	done
-+ 	-rmdir $(DESTDIR)$(sysconfdir)/termux/mirrors
-+ 
-+-
-+-
-+-uninstall-removed-mirrors:
-+-	for f in $(pkgdata_MIRRORS_REMOVED); do \
-+-		rm -f $(DESTDIR)$(sysconfdir)/termux/mirrors/$$f; \
-+-	done
-+-
-+-
-+-
-+ create-deb-control-files:
-+ 	sh -c "cd $$(dirname $(DESTDIR)$(sysconfdir)); find $$(basename $(DESTDIR)$(sysconfdir))/termux/mirrors -type f" >> ../conffiles;
-+ 	printf "# Delete removed mirrors\nfor f in %s; do\n    if test -f \"%s/etc/termux/mirrors/\$$f\"; then\n        echo \"Deleting removed mirror: \$$f\"; rm -f \"%s/etc/termux/mirrors/\$$f\";\n    fi\ndone" "$(pkgdata_MIRRORS_REMOVED)" "$(termux_prefix)" "$(termux_prefix)" >> ../preinst;
-+ 
-+ 
-+ 
-+-install-data-local: uninstall-removed-mirrors install-default install-asia install-chinese_mainland install-europe install-north_america install-oceania install-russia create-deb-control-files
-++install-data-local: install-default create-deb-control-files
-+ 
-+-uninstall-local: uninstall-removed-mirrors uninstall-default uninstall-asia uninstall-chinese_mainland uninstall-europe uninstall-north_america uninstall-oceania uninstall-russia
-++uninstall-local: uninstall-default
-+ 
-+-EXTRA_DIST = $(pkgdata_MIRRORS) $(pkgdata_ASIA_MIRRORS)		\
-+-$(pkgdata_CHINESE_MAINLAND_MIRRORS) $(pkgdata_EUROPE_MIRRORS)		\
-+-$(pkgdata_NORTH_AMERICA_MIRRORS) $(pkgdata_OCEANIA_MIRRORS)	
-++EXTRA_DIST = $(pkgdata_MIRRORS)
+diff --git a/Makefile.am b/Makefile.am
+index 964dedf..d4fae7d 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -16,7 +16,7 @@
+ # along with termux-tools.  If not, see
+ # <https://www.gnu.org/licenses/>.
+ 
+-SUBDIRS = . scripts doc mirrors motds src
++SUBDIRS = . scripts doc motds src
+ 
+ CONFFILES = \
+ etc/motd \
+diff --git a/configure.ac b/configure.ac
+index bc20ae8..751d441 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -95,6 +95,6 @@ AC_SUBST(termux_package_manager)
+ AC_PROG_LN_S
+ 
+ AC_CONFIG_FILES([Makefile scripts/Makefile doc/Makefile
+-mirrors/Makefile motds/Makefile src/Makefile])
++motds/Makefile src/Makefile])
+ 
+ AC_OUTPUT
+diff --git a/mirrors/Makefile.am b/mirrors/Makefile.am
+deleted file mode 100644
+index 46163db..0000000
+--- a/mirrors/Makefile.am
++++ /dev/null
+@@ -1,153 +0,0 @@
+-# Default mirrors
+-pkgdata_MIRRORS = default
+-
+-# Mirrors in Asia (excl. Chinese_Mainland and Russia)
+-pkgdata_ASIA_MIRRORS = mirror.albony.in mirror.bardia.tech          \
+-mirrors.cbrx.io linux.domainesia.com mirror.nevacloud.com            \
+-mirror.textcord.xyz tmx.xvx.my.id  mirrors.nguyenhoang.cloud         \
+-mirror.freedif.org mirror.twds.com.tw mirrors.in.sahilister.net       \
+-mirrors.saswata.cc termux.niranjan.co mirrors.ravidwivedi.in          \
+-mirror.jeonnam.school mirror.rinarin.dev mirrors.krnk.org             \
+-mirror.meowsmp.net 
+-
+-# Mirrors in Chinese Mainland
+-pkgdata_CHINESE_MAINLAND_MIRRORS = mirrors.tuna.tsinghua.edu.cn      \
+-mirror.iscas.ac.cn mirrors.nju.edu.cn mirrors.pku.edu.cn             \
+-mirrors.ustc.edu.cn mirrors.bfsu.edu.cn	mirrors.aliyun.com           \
+-mirrors.cqupt.edu.cn mirror.nyist.edu.cn mirrors.sau.edu.cn	         \
+-mirrors.sdu.edu.cn mirrors.sustech.edu.cn mirrors.zju.edu.cn         \
+-mirror.sjtu.edu.cn mirrors.hust.edu.cn mirrors.cernet.edu.cn
+-
+-# Mirrors in Europe
+-pkgdata_EUROPE_MIRRORS = grimler.se mirror.termux.dev			\
+-packages.termux.dev termux.librehat.com mirror.mwt.me			\
+-termux.mentality.rip mirrors.de.sahilister.net termux.cdn.lumito.net	\
+-termux.3san.dev mirror.accum.se			\
+-md.mirrors.hacktegic.com ftp.fau.de is.mirror.flokinet.net		\
+-ro.mirror.flokinet.net mirrors.medzik.dev mirrors.cfe.re		\
+-mirror.sunred.org mirror.autkin.net mirror.bouwhuis.network		\
+-mirror.leitecastro.com ftp.agdsn.de mirror.polido.pt			\
+-nl.mirror.flokinet.net
+-
+-# Mirrors in North America
+-pkgdata_NORTH_AMERICA_MIRRORS = plug-mirror.rcac.purdue.edu          \
+-dl.kcubeterm.com mirrors.utermux.dev mirror.fcix.net mirror.mwt.me   \
+-mirror.vern.cc mirror.csclub.uwaterloo.ca mirror.quantum5.ca		 \
+-termux.danyael.xyz gnlug.org
+-
+-# Mirrors in Oceania
+-pkgdata_OCEANIA_MIRRORS = mirrors.middlendian.com
+-
+-# Mirrors in Russia
+-pkgdata_RUSSIA_MIRRORS = mirror.mephi.ru repository.su
+-
+-
+-# Removed, renamed or moved mirrors
+-# Mirrors files are marked as conffiles and they are manually deleted
+-# in preinst step of package upgrade as conffiles removed in a newer
+-# version of the package are only deleted if package is purged and
+-# would otherwise be left as is after package upgrades and would still
+-# get used during mirror selection.
+-pkgdata_MIRRORS_REMOVED = \
+-asia/packages.nscdn.top \
+-china/mirrors.dgut.edu.cn \
+-china/mirrors.hit.edu.cn \
+-china/mirrors.njupt.edu.cn \
+-china/mirrors.scau.edu.cn \
+-china/mirror.iscas.ac.cn \
+-china/mirror.nyist.edu.cn \
+-china/mirror.sjtu.edu.cn \
+-china/mirrors.aliyun.com \
+-china/mirrors.bfsu.edu.cn \
+-china/mirrors.cqupt.edu.cn \
+-china/mirrors.nju.edu.cn \
+-china/mirrors.pku.edu.cn \
+-china/mirrors.qvq.net.cn \
+-china/mirrors.sau.edu.cn \
+-china/mirrors.sdu.edu.cn \
+-china/mirrors.sustech.edu.cn \
+-china/mirrors.tuna.tsinghua.edu.cn \
+-china/mirrors.ustc.edu.cn \
+-china/mirrors.zju.edu.cn \
+-chinese_mainland/mirrors.qvq.net.cn \
+-europe/cdn.lumito.net \
+-europe/mirror.termux.dv \
+-europe/termux.sahilister.in \
+-europe/termux.astra.in.ua \
+-north_america/packages.termux.dev \
+-oceania/mirrors.wale.id.au \
+-russia/mirror.surf \
+-south_america/mirrors.rda.run \
+-asia/mirrors.saswata.xyz \
+-asia/mirrors.omsinchan.ac.th
+-
+-
+-
+-define install-mirror-rule
+-install-$1:
+-	$$(MKDIR_P) $$(DESTDIR)$$(sysconfdir)/termux/mirrors/$1
+-	for f in $$(pkgdata_$2_MIRRORS); do \
+-		$(INSTALL) -m 644 $(srcdir)/$1/$$$$f \
+-		$(DESTDIR)$(sysconfdir)/termux/mirrors/$1; \
+-	done
+-endef
+-
+-define uninstall-mirror-rule
+-uninstall-$1:
+-	for f in $$(pkgdata_$2_MIRRORS); do \
+-		rm -f $(DESTDIR)$(sysconfdir)/termux/mirrors/$1/$$$$f; \
+-	done
+-	-rmdir $(DESTDIR)$(sysconfdir)/termux/mirrors/$1
+-endef
+-
+-$(eval $(call install-mirror-rule,asia,ASIA))
+-$(eval $(call install-mirror-rule,chinese_mainland,CHINESE_MAINLAND))
+-$(eval $(call install-mirror-rule,europe,EUROPE))
+-$(eval $(call install-mirror-rule,north_america,NORTH_AMERICA))
+-$(eval $(call install-mirror-rule,oceania,OCEANIA))
+-$(eval $(call install-mirror-rule,russia,RUSSIA))
+-
+-$(eval $(call uninstall-mirror-rule,asia,ASIA))
+-$(eval $(call uninstall-mirror-rule,chinese_mainland,CHINESE_MAINLAND))
+-$(eval $(call uninstall-mirror-rule,europe,EUROPE))
+-$(eval $(call uninstall-mirror-rule,north_america,NORTH_AMERICA))
+-$(eval $(call uninstall-mirror-rule,oceania,OCEANIA))
+-$(eval $(call uninstall-mirror-rule,russia,RUSSIA))
+-
+-
+-
+-install-default: $(pkgdata_MIRRORS)
+-	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/termux/mirrors
+-	for f in $(pkgdata_MIRRORS); do \
+-		$(INSTALL) -m 644 $(srcdir)/$$f \
+-		$(DESTDIR)$(sysconfdir)/termux/mirrors; \
+-	done
+-
+-uninstall-default:
+-	for f in $(pkgdata_MIRRORS); do \
+-		rm -f $(DESTDIR)$(sysconfdir)/termux/mirrors/$$f; \
+-	done
+-	-rmdir $(DESTDIR)$(sysconfdir)/termux/mirrors
+-
+-
+-
+-uninstall-removed-mirrors:
+-	for f in $(pkgdata_MIRRORS_REMOVED); do \
+-		rm -f $(DESTDIR)$(sysconfdir)/termux/mirrors/$$f; \
+-	done
+-
+-
+-
+-create-deb-control-files:
+-	sh -c "cd $$(dirname $(DESTDIR)$(sysconfdir)); find $$(basename $(DESTDIR)$(sysconfdir))/termux/mirrors -type f" >> ../conffiles;
+-	printf "# Delete removed mirrors\nfor f in %s; do\n    if test -f \"%s/etc/termux/mirrors/\$$f\"; then\n        echo \"Deleting removed mirror: \$$f\"; rm -f \"%s/etc/termux/mirrors/\$$f\";\n    fi\ndone" "$(pkgdata_MIRRORS_REMOVED)" "$(termux_prefix)" "$(termux_prefix)" >> ../preinst;
+-
+-
+-
+-install-data-local: uninstall-removed-mirrors install-default install-asia install-chinese_mainland install-europe install-north_america install-oceania install-russia create-deb-control-files
+-
+-uninstall-local: uninstall-removed-mirrors uninstall-default uninstall-asia uninstall-chinese_mainland uninstall-europe uninstall-north_america uninstall-oceania uninstall-russia
+-
+-EXTRA_DIST = $(pkgdata_MIRRORS) $(pkgdata_ASIA_MIRRORS)		\
+-$(pkgdata_CHINESE_MAINLAND_MIRRORS) $(pkgdata_EUROPE_MIRRORS)		\
+-$(pkgdata_NORTH_AMERICA_MIRRORS) $(pkgdata_OCEANIA_MIRRORS)	
+diff --git a/mirrors/asia/linux.domainesia.com b/mirrors/asia/linux.domainesia.com
+deleted file mode 100644
+index 20c5ec9..0000000
+--- a/mirrors/asia/linux.domainesia.com
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by DomaiNesia, hosted in Indonesia
+-WEIGHT=1
+-MAIN="https://linux.domainesia.com/applications/termux/termux-main"
+-ROOT="https://linux.domainesia.com/applications/termux/termux-root"
+-X11="https://linux.domainesia.com/applications/termux/termux-x11"
+diff --git a/mirrors/asia/mirror.albony.in b/mirrors/asia/mirror.albony.in
+deleted file mode 100644
+index 328a81d..0000000
+--- a/mirrors/asia/mirror.albony.in
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Albonycal, hosted in India
+-WEIGHT=1
+-MAIN="https://mirror.albony.in/termux/termux-main"
+-ROOT="https://mirror.albony.in/termux/termux-root"
+-X11="https://mirror.albony.in/termux/termux-x11"
+diff --git a/mirrors/asia/mirror.bardia.tech b/mirrors/asia/mirror.bardia.tech
+deleted file mode 100644
+index 37a8f65..0000000
+--- a/mirrors/asia/mirror.bardia.tech
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Bardia Moshiri, hosted in Iran
+-WEIGHT=1
+-MAIN="https://mirror.bardia.tech/termux/termux-main"
+-ROOT="https://mirror.bardia.tech/termux/termux-root"
+-X11="https://mirror.bardia.tech/termux/termux-x11"
+diff --git a/mirrors/asia/mirror.freedif.org b/mirrors/asia/mirror.freedif.org
+deleted file mode 100644
+index 8e8224c..0000000
+--- a/mirrors/asia/mirror.freedif.org
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by karibu, hosted in Singapore
+-WEIGHT=1
+-MAIN="https://mirror.freedif.org/termux/termux-main"
+-ROOT="https://mirror.freedif.org/termux/termux-root"
+-X11="https://mirror.freedif.org/termux/termux-x11"
+diff --git a/mirrors/asia/mirror.jeonnam.school b/mirrors/asia/mirror.jeonnam.school
+deleted file mode 100644
+index 54dc35b..0000000
+--- a/mirrors/asia/mirror.jeonnam.school
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Jeonnam High School Software Solution Club, hosted in Republic of Korea
+-WEIGHT=1
+-MAIN="https://mirror.jeonnam.school/termux/termux-main"
+-ROOT="https://mirror.jeonnam.school/termux/termux-root"
+-X11="https://mirror.jeonnam.school/termux/termux-x11"
+diff --git a/mirrors/asia/mirror.meowsmp.net b/mirrors/asia/mirror.meowsmp.net
+deleted file mode 100644
+index 28c7ca2..0000000
+--- a/mirrors/asia/mirror.meowsmp.net
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by @MeowIce, hosted in Ho Chi Minh, Vietnam.
+-WEIGHT=1
+-MAIN="https://mirror.meowsmp.net/termux/termux-main"
+-ROOT="https://mirror.meowsmp.net/termux/termux-root"
+-X11="https://mirror.meowsmp.net/termux/termux-x11"
+diff --git a/mirrors/asia/mirror.nevacloud.com b/mirrors/asia/mirror.nevacloud.com
+deleted file mode 100644
+index 1b4ed04..0000000
+--- a/mirrors/asia/mirror.nevacloud.com
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Nevacloud, hosted in Indonesia
+-WEIGHT=1
+-MAIN="https://mirror.nevacloud.com/applications/termux/termux-main"
+-ROOT="https://mirror.nevacloud.com/applications/termux/termux-root"
+-X11="https://mirror.nevacloud.com/applications/termux/termux-x11"
+diff --git a/mirrors/asia/mirror.rinarin.dev b/mirrors/asia/mirror.rinarin.dev
+deleted file mode 100644
+index 22cf6c0..0000000
+--- a/mirrors/asia/mirror.rinarin.dev
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Bombyeol, hosted in Daegu, Republic of Korea
+-WEIGHT=1
+-MAIN="https://mirror.rinarin.dev/termux/termux-main"
+-ROOT="https://mirror.rinarin.dev/termux/termux-root"
+-X11="https://mirror.rinarin.dev/termux/termux-x11"
+diff --git a/mirrors/asia/mirror.textcord.xyz b/mirrors/asia/mirror.textcord.xyz
+deleted file mode 100644
+index a04847a..0000000
+--- a/mirrors/asia/mirror.textcord.xyz
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Dev-Nergis, hosted in Republic of Korea
+-WEIGHT=1
+-MAIN="https://mirror.textcord.xyz/termux/termux-main"
+-ROOT="https://mirror.textcord.xyz/termux/termux-root"
+-X11="https://mirror.textcord.xyz/termux/termux-x11"
+diff --git a/mirrors/asia/mirror.twds.com.tw b/mirrors/asia/mirror.twds.com.tw
+deleted file mode 100644
+index acd77d1..0000000
+--- a/mirrors/asia/mirror.twds.com.tw
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Taiwan Digital Streaming Co, hosted in Taiwan
+-WEIGHT=1
+-MAIN="https://mirror.twds.com.tw/termux/termux-main"
+-ROOT="https://mirror.twds.com.tw/termux/termux-root"
+-X11="https://mirror.twds.com.tw/termux/termux-x11"
+diff --git a/mirrors/asia/mirrors.cbrx.io b/mirrors/asia/mirrors.cbrx.io
+deleted file mode 100644
+index 7b9e602..0000000
+--- a/mirrors/asia/mirrors.cbrx.io
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by cyberrex0, hosted in Japan
+-WEIGHT=1
+-MAIN="https://mirrors.cbrx.io/apt/termux/termux-main"
+-ROOT="https://mirrors.cbrx.io/apt/termux/termux-root"
+-X11="https://mirrors.cbrx.io/apt/termux/termux-x11"
+diff --git a/mirrors/asia/mirrors.in.sahilister.net b/mirrors/asia/mirrors.in.sahilister.net
+deleted file mode 100644
+index 3227022..0000000
+--- a/mirrors/asia/mirrors.in.sahilister.net
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Sahil Dhiman, hosted in India
+-WEIGHT=1
+-MAIN="https://mirrors.in.sahilister.net/termux/termux-main/"
+-ROOT="https://mirrors.in.sahilister.net/termux/termux-root/"
+-X11="https://mirrors.in.sahilister.net/termux/termux-x11/"
+\ No newline at end of file
+diff --git a/mirrors/asia/mirrors.krnk.org b/mirrors/asia/mirrors.krnk.org
+deleted file mode 100644
+index bf334ad..0000000
+--- a/mirrors/asia/mirrors.krnk.org
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by KuronekoServer, hosted in Tokyo, Japan
+-WEIGHT=1
+-MAIN="https://mirrors.krnk.org/apt/termux/termux-main"
+-ROOT="https://mirrors.krnk.org/apt/termux/termux-root"
+-X11="https://mirrors.krnk.org/apt/termux/termux-x11"
+diff --git a/mirrors/asia/mirrors.nguyenhoang.cloud b/mirrors/asia/mirrors.nguyenhoang.cloud
+deleted file mode 100644
+index 3363f80..0000000
+--- a/mirrors/asia/mirrors.nguyenhoang.cloud
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Nguyen Hoang, hosted in Hanoi, Vietnam.
+-WEIGHT=1
+-MAIN="https://mirrors.nguyenhoang.cloud/termux/termux-main"
+-ROOT="https://mirrors.nguyenhoang.cloud/termux/termux-root"
+-X11="https://mirrors.nguyenhoang.cloud/termux/termux-x11"
+diff --git a/mirrors/asia/mirrors.ravidwivedi.in b/mirrors/asia/mirrors.ravidwivedi.in
+deleted file mode 100644
+index bb1ad0c..0000000
+--- a/mirrors/asia/mirrors.ravidwivedi.in
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Ravi, hosted in Mumbai, India.
+-WEIGHT=1
+-MAIN="https://mirrors.ravidwivedi.in/termux/termux-main"
+-ROOT="https://mirrors.ravidwivedi.in/termux/termux-root"
+-X11="https://mirrors.ravidwivedi.in/termux/termux-x11"
+diff --git a/mirrors/asia/mirrors.saswata.cc b/mirrors/asia/mirrors.saswata.cc
+deleted file mode 100644
+index 44d2e48..0000000
+--- a/mirrors/asia/mirrors.saswata.cc
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by saswatasarkar13, hosted in India
+-WEIGHT=1
+-MAIN="https://mirrors.saswata.cc/termux/termux-main"
+-ROOT="https://mirrors.saswata.cc/termux/termux-root"
+-X11="https://mirrors.saswata.cc/termux/termux-x11"
+diff --git a/mirrors/asia/termux.niranjan.co b/mirrors/asia/termux.niranjan.co
+deleted file mode 100644
+index 5ab0019..0000000
+--- a/mirrors/asia/termux.niranjan.co
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Niranjan Fartare, hosted in Mumbai, India
+-WEIGHT=1
+-MAIN="https://termux.niranjan.co/termux-main"
+-ROOT="https://termux.niranjan.co/termux-root"
+-X11="https://termux.niranjan.co/termux-x11"
+diff --git a/mirrors/asia/tmx.xvx.my.id b/mirrors/asia/tmx.xvx.my.id
+deleted file mode 100644
+index aba261f..0000000
+--- a/mirrors/asia/tmx.xvx.my.id
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by MyDapitt, hosted in Singapore
+-WEIGHT=1
+-MAIN="https://tmx.xvx.my.id/apt/termux-main"
+-ROOT="https://tmx.xvx.my.id/apt/termux-root"
+-X11="https://tmx.xvx.my.id/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirror.iscas.ac.cn b/mirrors/chinese_mainland/mirror.iscas.ac.cn
+deleted file mode 100644
+index 908a77f..0000000
+--- a/mirrors/chinese_mainland/mirror.iscas.ac.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by ISCAS - Institute of Software, Chinese Academy of Sciences
+-WEIGHT=1
+-MAIN="https://mirror.iscas.ac.cn/termux/apt/termux-main"
+-ROOT="https://mirror.iscas.ac.cn/termux/apt/termux-root"
+-X11="https://mirror.iscas.ac.cn/termux/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirror.nyist.edu.cn b/mirrors/chinese_mainland/mirror.nyist.edu.cn
+deleted file mode 100644
+index bff2afb..0000000
+--- a/mirrors/chinese_mainland/mirror.nyist.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Nanyang Institute of Technology
+-WEIGHT=1
+-MAIN="https://mirror.nyist.edu.cn/termux/apt/termux-main"
+-ROOT="https://mirror.nyist.edu.cn/termux/apt/termux-root"
+-X11="https://mirror.nyist.edu.cn/termux/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirror.sjtu.edu.cn b/mirrors/chinese_mainland/mirror.sjtu.edu.cn
+deleted file mode 100644
+index 2d14263..0000000
+--- a/mirrors/chinese_mainland/mirror.sjtu.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by SJTUG, Shanghai Jiao Tong University
+-WEIGHT=1
+-MAIN="https://mirror.sjtu.edu.cn/termux/termux-main/"
+-ROOT="https://mirror.sjtu.edu.cn/termux/termux-root/"
+-X11="https://mirror.sjtu.edu.cn/termux/termux-x11/"
+diff --git a/mirrors/chinese_mainland/mirrors.aliyun.com b/mirrors/chinese_mainland/mirrors.aliyun.com
+deleted file mode 100644
+index 260c9e8..0000000
+--- a/mirrors/chinese_mainland/mirrors.aliyun.com
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Alibaba Open Source Mirror Site
+-WEIGHT=1
+-MAIN="https://mirrors.aliyun.com/termux/termux-main"
+-ROOT="https://mirrors.aliyun.com/termux/termux-root"
+-X11="https://mirrors.aliyun.com/termux/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.bfsu.edu.cn b/mirrors/chinese_mainland/mirrors.bfsu.edu.cn
+deleted file mode 100644
+index 4b955cf..0000000
+--- a/mirrors/chinese_mainland/mirrors.bfsu.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Beijing Foreign Studies University
+-WEIGHT=1
+-MAIN="https://mirrors.bfsu.edu.cn/termux/apt/termux-main"
+-ROOT="https://mirrors.bfsu.edu.cn/termux/apt/termux-root"
+-X11="https://mirrors.bfsu.edu.cn/termux/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.cernet.edu.cn b/mirrors/chinese_mainland/mirrors.cernet.edu.cn
+deleted file mode 100644
+index 36d230c..0000000
+--- a/mirrors/chinese_mainland/mirrors.cernet.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by CERNET. Geo-based mirror selection with education mirrorbits
+-WEIGHT=1
+-MAIN="https://mirrors.cernet.edu.cn/termux/apt/termux-main"
+-ROOT="https://mirrors.cernet.edu.cn/termux/apt/termux-root"
+-X11="https://mirrors.cernet.edu.cn/termux/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.cqupt.edu.cn b/mirrors/chinese_mainland/mirrors.cqupt.edu.cn
+deleted file mode 100644
+index 7610861..0000000
+--- a/mirrors/chinese_mainland/mirrors.cqupt.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by CQUPT - Chongqing University of Posts and Telecommunications
+-WEIGHT=1
+-MAIN="https://mirrors.cqupt.edu.cn/termux/termux-main"
+-ROOT="https://mirrors.cqupt.edu.cn/termux/termux-root"
+-X11="https://mirrors.cqupt.edu.cn/termux/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.hust.edu.cn b/mirrors/chinese_mainland/mirrors.hust.edu.cn
+deleted file mode 100644
+index 44f6317..0000000
+--- a/mirrors/chinese_mainland/mirrors.hust.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Huazhong University of Science and Technology
+-WEIGHT=1
+-MAIN="https://mirrors.hust.edu.cn/termux/apt/termux-main"
+-ROOT="https://mirrors.hust.edu.cn/termux/apt/termux-root"
+-X11="https://mirrors.hust.edu.cn/termux/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.nju.edu.cn b/mirrors/chinese_mainland/mirrors.nju.edu.cn
+deleted file mode 100644
+index e65d4b3..0000000
+--- a/mirrors/chinese_mainland/mirrors.nju.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by eScience Center, Nanjing University
+-WEIGHT=1
+-MAIN="https://mirrors.nju.edu.cn/termux/apt/termux-main"
+-ROOT="https://mirrors.nju.edu.cn/termux/apt/termux-root"
+-X11="https://mirrors.nju.edu.cn/termux/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.pku.edu.cn b/mirrors/chinese_mainland/mirrors.pku.edu.cn
+deleted file mode 100644
+index 599ab82..0000000
+--- a/mirrors/chinese_mainland/mirrors.pku.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Peking University
+-WEIGHT=1
+-MAIN="https://mirrors.pku.edu.cn/termux/termux-main/"
+-ROOT="https://mirrors.pku.edu.cn/termux/termux-root/"
+-X11="https://mirrors.pku.edu.cn/termux/termux-x11/"
+diff --git a/mirrors/chinese_mainland/mirrors.sau.edu.cn b/mirrors/chinese_mainland/mirrors.sau.edu.cn
+deleted file mode 100644
+index 9c25450..0000000
+--- a/mirrors/chinese_mainland/mirrors.sau.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Shenyang Aerospace University
+-WEIGHT=1
+-MAIN="https://mirrors.sau.edu.cn/termux/apt/termux-main"
+-ROOT="https://mirrors.sau.edu.cn/termux/apt/termux-root"
+-X11="https://mirrors.sau.edu.cn/termux/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.sdu.edu.cn b/mirrors/chinese_mainland/mirrors.sdu.edu.cn
+deleted file mode 100644
+index eb647fd..0000000
+--- a/mirrors/chinese_mainland/mirrors.sdu.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Shandong University
+-WEIGHT=1
+-MAIN="https://mirrors.sdu.edu.cn/termux/termux-main"
+-ROOT="https://mirrors.sdu.edu.cn/termux/termux-root"
+-X11="https://mirrors.sdu.edu.cn/termux/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.sustech.edu.cn b/mirrors/chinese_mainland/mirrors.sustech.edu.cn
+deleted file mode 100644
+index 9177141..0000000
+--- a/mirrors/chinese_mainland/mirrors.sustech.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Southern University of Science and Technology
+-WEIGHT=1
+-MAIN="https://mirrors.sustech.edu.cn/termux/apt/termux-main"
+-ROOT="https://mirrors.sustech.edu.cn/termux/apt/termux-root"
+-X11="https://mirrors.sustech.edu.cn/termux/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.tuna.tsinghua.edu.cn b/mirrors/chinese_mainland/mirrors.tuna.tsinghua.edu.cn
+deleted file mode 100644
+index de59665..0000000
+--- a/mirrors/chinese_mainland/mirrors.tuna.tsinghua.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Tsinghua University TUNA Association
+-WEIGHT=1
+-MAIN="https://mirrors.tuna.tsinghua.edu.cn/termux/apt/termux-main"
+-ROOT="https://mirrors.tuna.tsinghua.edu.cn/termux/apt/termux-root"
+-X11="https://mirrors.tuna.tsinghua.edu.cn/termux/apt/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.ustc.edu.cn b/mirrors/chinese_mainland/mirrors.ustc.edu.cn
+deleted file mode 100644
+index 1e859cb..0000000
+--- a/mirrors/chinese_mainland/mirrors.ustc.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by University of Science and Technology of China
+-WEIGHT=1
+-MAIN="https://mirrors.ustc.edu.cn/termux/termux-main"
+-ROOT="https://mirrors.ustc.edu.cn/termux/termux-root"
+-X11="https://mirrors.ustc.edu.cn/termux/termux-x11"
+diff --git a/mirrors/chinese_mainland/mirrors.zju.edu.cn b/mirrors/chinese_mainland/mirrors.zju.edu.cn
+deleted file mode 100644
+index e9a3778..0000000
+--- a/mirrors/chinese_mainland/mirrors.zju.edu.cn
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Information Technology Center, Zhejiang University
+-WEIGHT=1
+-MAIN="https://mirrors.zju.edu.cn/termux/apt/termux-main"
+-ROOT="https://mirrors.zju.edu.cn/termux/apt/termux-root"
+-X11="https://mirrors.zju.edu.cn/termux/apt/termux-x11"
+diff --git a/mirrors/default b/mirrors/default
+deleted file mode 100644
+index 24795ac..0000000
+--- a/mirrors/default
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Cached (by cloudflare) variant of packages.termux.dev
+-WEIGHT=10
+-MAIN="https://packages-cf.termux.dev/apt/termux-main"
+-ROOT="https://packages-cf.termux.dev/apt/termux-root"
+-X11="https://packages-cf.termux.dev/apt/termux-x11"
+diff --git a/mirrors/europe/ftp.agdsn.de b/mirrors/europe/ftp.agdsn.de
+deleted file mode 100644
+index 893eb63..0000000
+--- a/mirrors/europe/ftp.agdsn.de
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by the AG DSN, hosted in Dresden, Germany
+-WEIGHT=1
+-MAIN="https://ftp.agdsn.de/termux/termux-main"
+-ROOT="https://ftp.agdsn.de/termux/termux-root"
+-X11="https://ftp.agdsn.de/termux/termux-x11"
+diff --git a/mirrors/europe/ftp.fau.de b/mirrors/europe/ftp.fau.de
+deleted file mode 100644
+index 4c05b64..0000000
+--- a/mirrors/europe/ftp.fau.de
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by FAU, Hosted in Erlangen, Germany.
+-WEIGHT=1
+-MAIN="https://ftp.fau.de/termux/termux-main"
+-ROOT="https://ftp.fau.de/termux/termux-root"
+-X11="https://ftp.fau.de/termux/termux-x11"
+diff --git a/mirrors/europe/grimler.se b/mirrors/europe/grimler.se
+deleted file mode 100644
+index 3ae6ea5..0000000
+--- a/mirrors/europe/grimler.se
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by grimler, hosted in the Netherlands
+-WEIGHT=4
+-MAIN="https://grimler.se/termux/termux-main"
+-ROOT="https://grimler.se/termux/termux-root"
+-X11="https://grimler.se/termux/termux-x11"
+diff --git a/mirrors/europe/is.mirror.flokinet.net b/mirrors/europe/is.mirror.flokinet.net
+deleted file mode 100644
+index ca2d28f..0000000
+--- a/mirrors/europe/is.mirror.flokinet.net
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by FlokiNET, Hosted in Reykjavík,Iceland.
+-WEIGHT=1
+-MAIN="https://is.mirror.flokinet.net/termux/termux-main"
+-ROOT="https://is.mirror.flokinet.net/termux/termux-root"
+-X11="https://is.mirror.flokinet.net/termux/termux-x11"
+diff --git a/mirrors/europe/md.mirrors.hacktegic.com b/mirrors/europe/md.mirrors.hacktegic.com
+deleted file mode 100644
+index f0fc088..0000000
+--- a/mirrors/europe/md.mirrors.hacktegic.com
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by amocrenco, Hosted in Chisinau, Moldova.
+-WEIGHT=1
+-MAIN="https://md.mirrors.hacktegic.com/termux/termux-main"
+-ROOT="https://md.mirrors.hacktegic.com/termux/termux-root"
+-X11="https://md.mirrors.hacktegic.com/termux/termux-x11"
+diff --git a/mirrors/europe/mirror.accum.se b/mirrors/europe/mirror.accum.se
+deleted file mode 100644
+index fd2c2a1..0000000
+--- a/mirrors/europe/mirror.accum.se
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by the Academic Computer Club in Umeå, Hosted in Sweden
+-WEIGHT=1
+-MAIN="https://mirror.accum.se/mirror/termux.dev/termux-main"
+-ROOT="https://mirror.accum.se/mirror/termux.dev/termux-root"
+-X11="https://mirror.accum.se/mirror/termux.dev/termux-x11"
+diff --git a/mirrors/europe/mirror.autkin.net b/mirrors/europe/mirror.autkin.net
+deleted file mode 100644
+index 8209ae3..0000000
+--- a/mirrors/europe/mirror.autkin.net
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Andriy Utkin, hosted in Cambridge, UK, updated nightly
+-WEIGHT=1
+-MAIN="https://mirror.autkin.net/termux/termux-main"
+-ROOT="https://mirror.autkin.net/termux/termux-root"
+-X11="https://mirror.autkin.net/termux/termux-x11"
+diff --git a/mirrors/europe/mirror.bouwhuis.network b/mirrors/europe/mirror.bouwhuis.network
+deleted file mode 100644
+index b09a8f7..0000000
+--- a/mirrors/europe/mirror.bouwhuis.network
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by bouwhuis.network, hosted in Amsterdam, Netherlands.
+-WEIGHT=1
+-MAIN="https://mirror.bouwhuis.network/termux/termux-main"
+-ROOT="https://mirror.bouwhuis.network/termux/termux-root"
+-X11="https://mirror.bouwhuis.network/termux/termux-x11"
+diff --git a/mirrors/europe/mirror.leitecastro.com b/mirrors/europe/mirror.leitecastro.com
+deleted file mode 100644
+index 7e58b4c..0000000
+--- a/mirrors/europe/mirror.leitecastro.com
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Tomás Leite de Castro, hosted in Lisbon, Portugal.
+-WEIGHT=1
+-MAIN="https://mirror.leitecastro.com/termux/termux-main"
+-ROOT="https://mirror.leitecastro.com/termux/termux-root"
+-X11="https://mirror.leitecastro.com/termux/termux-x11"
+diff --git a/mirrors/europe/mirror.mwt.me b/mirrors/europe/mirror.mwt.me
+deleted file mode 100644
+index 77465f2..0000000
+--- a/mirrors/europe/mirror.mwt.me
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Mwt, hosted in Luxembourg
+-WEIGHT=1
+-MAIN="https://mirror.mwt.me/termux/main"
+-ROOT="https://mirror.mwt.me/termux/root"
+-X11="https://mirror.mwt.me/termux/x11"
+diff --git a/mirrors/europe/mirror.polido.pt b/mirrors/europe/mirror.polido.pt
+deleted file mode 100644
+index 85d672e..0000000
+--- a/mirrors/europe/mirror.polido.pt
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by 7zx, hosted in Porto, Portugal
+-WEIGHT=1
+-MAIN="https://mirror.polido.pt/termux/termux-main"
+-ROOT="https://mirror.polido.pt/termux/termux-root"
+-X11="https://mirror.polido.pt/termux/termux-x11"
+diff --git a/mirrors/europe/mirror.sunred.org b/mirrors/europe/mirror.sunred.org
+deleted file mode 100644
+index e342698..0000000
+--- a/mirrors/europe/mirror.sunred.org
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by SunRed, hosted in Falkenstein, Germany.
+-WEIGHT=1
+-MAIN="https://mirror.sunred.org/termux/termux-main"
+-ROOT="https://mirror.sunred.org/termux/termux-root"
+-X11="https://mirror.sunred.org/termux/termux-x11"
+diff --git a/mirrors/europe/mirror.termux.dev b/mirrors/europe/mirror.termux.dev
+deleted file mode 100644
+index 24535c2..0000000
+--- a/mirrors/europe/mirror.termux.dev
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Geo-based mirror selection with mirrorbits
+-WEIGHT=1
+-MAIN="https://mirror.termux.dev/termux-main"
+-ROOT="https://mirror.termux.dev/termux-root"
+-X11="https://mirror.termux.dev/termux-x11"
+diff --git a/mirrors/europe/mirrors.cfe.re b/mirrors/europe/mirrors.cfe.re
+deleted file mode 100644
+index 74a35e9..0000000
+--- a/mirrors/europe/mirrors.cfe.re
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by cfxproxy, Hosted in Kalisz, Poland.
+-WEIGHT=1
+-MAIN="https://mirrors.cfe.re/termux/termux-main"
+-ROOT="https://mirrors.cfe.re/termux/termux-root"
+-X11="https://mirrors.cfe.re/termux/termux-x11"
+diff --git a/mirrors/europe/mirrors.de.sahilister.net b/mirrors/europe/mirrors.de.sahilister.net
+deleted file mode 100644
+index e77cc98..0000000
+--- a/mirrors/europe/mirrors.de.sahilister.net
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Sahil Dhiman, hosted in Germany
+-WEIGHT=1
+-MAIN="https://mirrors.de.sahilister.net/termux/termux-main"
+-ROOT="https://mirrors.de.sahilister.net/termux/termux-root"
+-X11="https://mirrors.de.sahilister.net/termux/termux-x11"
+diff --git a/mirrors/europe/mirrors.medzik.dev b/mirrors/europe/mirrors.medzik.dev
+deleted file mode 100644
+index 036dada..0000000
+--- a/mirrors/europe/mirrors.medzik.dev
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by M3DZIK, Hosted in Frankfurt, Germany.
+-WEIGHT=1
+-MAIN="https://mirrors.medzik.dev/termux/termux-main"
+-ROOT="https://mirrors.medzik.dev/termux/termux-root"
+-X11="https://mirrors.medzik.dev/termux/termux-x11"
+diff --git a/mirrors/europe/nl.mirror.flokinet.net b/mirrors/europe/nl.mirror.flokinet.net
+deleted file mode 100644
+index 6bb58ba..0000000
+--- a/mirrors/europe/nl.mirror.flokinet.net
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by FlokiNET, hosted in the Netherlands
+-WEIGHT=1
+-MAIN="https://nl.mirror.flokinet.net/termux/termux-main"
+-ROOT="https://nl.mirror.flokinet.net/termux/termux-root"
+-X11="https://nl.mirror.flokinet.net/termux/termux-x11"
+diff --git a/mirrors/europe/packages.termux.dev b/mirrors/europe/packages.termux.dev
+deleted file mode 100644
+index e47a196..0000000
+--- a/mirrors/europe/packages.termux.dev
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Termux's origin repo, hosted in Falkenstein, Germany
+-WEIGHT=1
+-MAIN="https://packages.termux.dev/apt/termux-main"
+-ROOT="https://packages.termux.dev/apt/termux-root"
+-X11="https://packages.termux.dev/apt/termux-x11"
+diff --git a/mirrors/europe/ro.mirror.flokinet.net b/mirrors/europe/ro.mirror.flokinet.net
+deleted file mode 100644
+index b72c0dc..0000000
+--- a/mirrors/europe/ro.mirror.flokinet.net
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by FlokiNET, Hosted in Bucharest,Romania.
+-WEIGHT=1
+-MAIN="https://ro.mirror.flokinet.net/termux/termux-main"
+-ROOT="https://ro.mirror.flokinet.net/termux/termux-root"
+-X11="https://ro.mirror.flokinet.net/termux/termux-x11"
+diff --git a/mirrors/europe/termux.3san.dev b/mirrors/europe/termux.3san.dev
+deleted file mode 100644
+index 9d68e9b..0000000
+--- a/mirrors/europe/termux.3san.dev
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Exosunandnet
+-WEIGHT=1
+-MAIN="https://termux.3san.dev/termux/termux-main"
+-ROOT="https://termux.3san.dev/termux/termux-root"
+-X11="https://termux.3san.dev/termux/termux-x11"
+diff --git a/mirrors/europe/termux.cdn.lumito.net b/mirrors/europe/termux.cdn.lumito.net
+deleted file mode 100644
+index 9863404..0000000
+--- a/mirrors/europe/termux.cdn.lumito.net
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Lumito, hosted in Germany
+-WEIGHT=1
+-MAIN="https://termux.cdn.lumito.net/termux-main"
+-ROOT="https://termux.cdn.lumito.net/termux-root"
+-X11="https://termux.cdn.lumito.net/termux-x11"
+diff --git a/mirrors/europe/termux.librehat.com b/mirrors/europe/termux.librehat.com
+deleted file mode 100644
+index ab670fd..0000000
+--- a/mirrors/europe/termux.librehat.com
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by librehat, hosted in the UK
+-WEIGHT=1
+-MAIN="https://termux.librehat.com/apt/termux-main"
+-ROOT="https://termux.librehat.com/apt/termux-root"
+-X11="https://termux.librehat.com/apt/termux-x11"
+diff --git a/mirrors/europe/termux.mentality.rip b/mirrors/europe/termux.mentality.rip
+deleted file mode 100644
+index 9b295d6..0000000
+--- a/mirrors/europe/termux.mentality.rip
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by A1batross, hosted in Finland
+-WEIGHT=1
+-MAIN="https://termux.mentality.rip/termux-main"
+-ROOT="https://termux.mentality.rip/termux-root"
+-X11="https://termux.mentality.rip/termux-x11"
+diff --git a/mirrors/north_america/dl.kcubeterm.com b/mirrors/north_america/dl.kcubeterm.com
+deleted file mode 100644
+index 4ce69b4..0000000
+--- a/mirrors/north_america/dl.kcubeterm.com
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Kcubeterm, in California, US
+-WEIGHT=1
+-MAIN="https://dl.kcubeterm.com/termux-main"
+-ROOT="https://dl.kcubeterm.com/termux-root"
+-X11="https://dl.kcubeterm.com/termux-x11"
+diff --git a/mirrors/north_america/gnlug.org b/mirrors/north_america/gnlug.org
+deleted file mode 100644
+index 3c319e6..0000000
+--- a/mirrors/north_america/gnlug.org
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by GNLUG, in Virginia, US
+-WEIGHT=1
+-MAIN="https://gnlug.org/pub/termux/termux-main"
+-ROOT="https://gnlug.org/pub/termux/termux-root"
+-X11="https://gnlug.org/pub/termux/termux-x11"
+diff --git a/mirrors/north_america/mirror.csclub.uwaterloo.ca b/mirrors/north_america/mirror.csclub.uwaterloo.ca
+deleted file mode 100644
+index 3a38935..0000000
+--- a/mirrors/north_america/mirror.csclub.uwaterloo.ca
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Computer Science Club of the University of Waterloo
+-WEIGHT=1
+-MAIN="https://mirror.csclub.uwaterloo.ca/termux/termux-main"
+-ROOT="https://mirror.csclub.uwaterloo.ca/termux/termux-root"
+-X11="https://mirror.csclub.uwaterloo.ca/termux/termux-x11"
+diff --git a/mirrors/north_america/mirror.fcix.net b/mirrors/north_america/mirror.fcix.net
+deleted file mode 100644
+index 7f0f0d3..0000000
+--- a/mirrors/north_america/mirror.fcix.net
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Fremont Cabal Internet Exchange
+-WEIGHT=1
+-MAIN="https://mirror.fcix.net/termux/termux-main"
+-ROOT="https://mirror.fcix.net/termux/termux-root"
+-X11="https://mirror.fcix.net/termux/termux-x11"
+diff --git a/mirrors/north_america/mirror.mwt.me b/mirrors/north_america/mirror.mwt.me
+deleted file mode 100644
+index f7ed56d..0000000
+--- a/mirrors/north_america/mirror.mwt.me
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Mwt, hosted in New Jersey, USA
+-WEIGHT=1
+-MAIN="https://mirror.mwt.me/termux/main"
+-ROOT="https://mirror.mwt.me/termux/root"
+-X11="https://mirror.mwt.me/termux/x11"
+diff --git a/mirrors/north_america/mirror.quantum5.ca b/mirrors/north_america/mirror.quantum5.ca
+deleted file mode 100644
+index 6b90618..0000000
+--- a/mirrors/north_america/mirror.quantum5.ca
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by quantum5
+-WEIGHT=1
+-MAIN="https://mirror.quantum5.ca/termux/termux-main"
+-ROOT="https://mirror.quantum5.ca/termux/termux-root"
+-X11="https://mirror.quantum5.ca/termux/termux-x11"
+diff --git a/mirrors/north_america/mirror.vern.cc b/mirrors/north_america/mirror.vern.cc
+deleted file mode 100644
+index 58441d7..0000000
+--- a/mirrors/north_america/mirror.vern.cc
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by vern.cc
+-WEIGHT=1
+-MAIN="https://mirror.vern.cc/termux/termux-main"
+-ROOT="https://mirror.vern.cc/termux/termux-root"
+-X11="https://mirror.vern.cc/termux/termux-x11"
+diff --git a/mirrors/north_america/mirrors.utermux.dev b/mirrors/north_america/mirrors.utermux.dev
+deleted file mode 100644
+index 5173ea0..0000000
+--- a/mirrors/north_america/mirrors.utermux.dev
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Utermux, hosted in San Jose, California, USA
+-WEIGHT=1
+-MAIN="https://mirrors.utermux.dev/termux/termux-main"
+-ROOT="https://mirrors.utermux.dev/termux/termux-root"
+-X11="https://mirrors.utermux.dev/termux/termux-x11"
+diff --git a/mirrors/north_america/plug-mirror.rcac.purdue.edu b/mirrors/north_america/plug-mirror.rcac.purdue.edu
+deleted file mode 100644
+index e04fa9f..0000000
+--- a/mirrors/north_america/plug-mirror.rcac.purdue.edu
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Purdue Linux User Group
+-WEIGHT=1
+-MAIN="https://plug-mirror.rcac.purdue.edu/termux/termux-main"
+-ROOT="https://plug-mirror.rcac.purdue.edu/termux/termux-root"
+-X11="https://plug-mirror.rcac.purdue.edu/termux/termux-x11"
+diff --git a/mirrors/north_america/termux.danyael.xyz b/mirrors/north_america/termux.danyael.xyz
+deleted file mode 100644
+index d1e7d8e..0000000
+--- a/mirrors/north_america/termux.danyael.xyz
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by Dan Yael, in Las Vegas, US
+-WEIGHT=1
+-MAIN="https://termux.danyael.xyz/termux/termux-main"
+-ROOT="https://termux.danyael.xyz/termux/termux-root"
+-X11="https://termux.danyael.xyz/termux/termux-x11"
+diff --git a/mirrors/oceania/mirrors.middlendian.com b/mirrors/oceania/mirrors.middlendian.com
+deleted file mode 100644
+index 3fc5445..0000000
+--- a/mirrors/oceania/mirrors.middlendian.com
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by DiffieHellman, hosted in Australia
+-WEIGHT=1
+-MAIN="https://mirrors.middlendian.com/termux/termux-main"
+-ROOT="https://mirrors.middlendian.com/termux/termux-root"
+-X11="https://mirrors.middlendian.com/termux/termux-x11"
+diff --git a/mirrors/russia/mirror.mephi.ru b/mirrors/russia/mirror.mephi.ru
+deleted file mode 100644
+index af15d55..0000000
+--- a/mirrors/russia/mirror.mephi.ru
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirrors by National Research Nuclear University MEPhI
+-WEIGHT=1
+-MAIN="http://mirror.mephi.ru/termux/termux-main"
+-ROOT="http://mirror.mephi.ru/termux/termux-root"
+-X11="http://mirror.mephi.ru/termux/termux-x11"
+diff --git a/mirrors/russia/repository.su b/mirrors/russia/repository.su
+deleted file mode 100644
+index a1ddee3..0000000
+--- a/mirrors/russia/repository.su
++++ /dev/null
+@@ -1,6 +0,0 @@
+-# This file is sourced by pkg
+-# Mirror by dmitry
+-WEIGHT=1
+-MAIN="https://repository.su/termux/termux-main/"
+-ROOT="https://repository.su/termux/termux-root/"
+-X11="https://repository.su/termux/termux-x11/"
