@@ -83,6 +83,15 @@ declare -a PATCHES=(
 
     # Update package name in termux-tools
     "termux-tools-update-package-name.patch"
+
+    # Cleanup OpenJDK 21 to remove postinst & prerm scripts
+    "openjdk-21-cleanup.patch"
+
+    # Cleanup vim to remove postinst scripts
+    "vim-cleanup.patch"
+
+    # Restore files and cleanup in second stage
+    "scripts-cleanup-in-second-stage.patch"
 )
 
 # Script configuration

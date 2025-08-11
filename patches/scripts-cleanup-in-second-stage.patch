@@ -1,0 +1,75 @@
+diff --git a/scripts/bootstrap/termux-bootstrap-second-stage.sh b/scripts/bootstrap/termux-bootstrap-second-stage.sh
+index 723993d6dc..2889c7e919 100755
+--- a/scripts/bootstrap/termux-bootstrap-second-stage.sh
++++ b/scripts/bootstrap/termux-bootstrap-second-stage.sh
+@@ -149,8 +149,70 @@ run_bootstrap_second_stage_inner() {
+ 		return $return_value
+ 	fi
+ 
++	log "Restoring ct.sym"
++	restore_ctsyms
++	return_value=$?
++	if [ $return_value -ne 0 ]; then
++		log_error "Failed to restore ct.sym"
++		return $return_value
++	fi
++
++	log "Repacking archives"
++	repack_archives
++	return_value=$?
++	if [ $return_value -ne 0 ]; then
++		log_error "Failed to repack archives"
++		return $return_value
++	fi
++
+ 	return 0
++}
++
++repack_archives() {
++	# Find and repack all ZIP files with max compression
++	while read -r -d '' zip; do
++		repack_zip "$(realpath "$zip")"
++	done < <(find "$TERMUX_PREFIX" -type f -name \*.zip -print0)
++}
++
++repack_zip() {
++	input="$1"
++
++	log "Repacking $input"
++
++	local temp
++	temp=$(mktemp -d)
++
++	(cd "$temp"
++		unzip -qq "$input"
++		rm "$input"
++		zip -XDqr9 "$input" ./*
++	)
++}
++
++restore_ctsyms() {
++	# Repack ct.sym in JDK
++	jdk="21"
++	dir="$TERMUX_PREFIX/lib/jvm/java-$jdk-openjdk"
++	ctsym="$dir/lib/ct.sym"
++	if ! [[ -f "$ctsym" ]]; then
++		# Doesn't exist; continue
++		log "JDK $jdk - ct.sym doesn't exist!"
++		continue
++	fi
++
++	ctsym="$(realpath "$ctsym")"
++
++	local temp
++	temp=$(mktemp -d)
+ 
++	(cd "$temp"
++		brotli -do ct.sym "$ctsym"
++		unzip -qq "ct.sym"
++		rm "ct.sym"
++		rm "$ctsym"
++		zip -qr9 "$ctsym" ./*
++	) && rm -rf "$temp" && log "JDK $jdk - ct.sym restored"
+ }
+ 
+ run_package_postinst_maintainer_scripts() {

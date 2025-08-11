@@ -1,0 +1,49 @@
+diff --git a/packages/openjdk-21/build.sh b/packages/openjdk-21/build.sh
+index 55f62c867e..7d027fb600 100644
+--- a/packages/openjdk-21/build.sh
++++ b/packages/openjdk-21/build.sh
+@@ -117,6 +117,23 @@ termux_step_make_install() {
+ 	mkdir -p $TERMUX_PREFIX/lib/jvm/java-21-openjdk/etc/profile.d
+ 	echo "export JAVA_HOME=$TERMUX_PREFIX/lib/jvm/java-21-openjdk/" > \
+ 		$TERMUX_PREFIX/lib/jvm/java-21-openjdk/etc/profile.d/java.sh
++	ln -sf "$TERMUX_PREFIX/lib/jvm/java-21-openjdk/etc/profile.d/java.sh" "$TERMUX_PREFIX/etc/profile.d/java.sh"
++
++	# Remove unnecessary files
++	rm -vrf "$TERMUX_PREFIX/lib/jvm/java-21-openjdk/demo"
++
++	# Strip binaries
++	"$STRIP" $TERMUX_PREFIX/lib/jvm/java-21-openjdk/bin/*
++
++	# Symlink binaries
++	for bin in $TERMUX_PREFIX/lib/jvm/java-21-openjdk/bin/*; do
++		ln -sf "$bin" "$TERMUX_PREFIX/bin/$(basename "$bin")"
++	done
++
++	# Symlink manpages
++	for page in $TERMUX_PREFIX/lib/jvm/java-21-openjdk/man/man1/*; do
++		ln -sf "$page" "$TERMUX_PREFIX/share/man/man1/$(basename "$page")"
++	done
+ }
+ 
+ termux_step_post_make_install() {
+@@ -125,20 +142,3 @@ termux_step_post_make_install() {
+ 		gzip "$manpage"
+ 	done
+ }
+-
+-termux_step_create_debscripts() {
+-	binaries="$(find $TERMUX_PREFIX/lib/jvm/java-21-openjdk/bin -executable -type f | xargs -I{} basename "{}" | xargs echo)"
+-	manpages="$(find $TERMUX_PREFIX/lib/jvm/java-21-openjdk/man/man1 -name "*.1.gz" | xargs -I{} basename "{}" | xargs echo)"
+-
+-	for hook in postinst prerm; do
+-		sed -e "s|@TERMUX_PREFIX@|${TERMUX_PREFIX}|g" \
+-			-e "s|@binaries@|${binaries}|g" \
+-			-e "s|@manpages@|${manpages}|g" \
+-			"$TERMUX_PKG_BUILDER_DIR/hooks/$TERMUX_PACKAGE_FORMAT/$hook.in" > $hook
+-		chmod 700 $hook
+-	done
+-
+-	if [ "$TERMUX_PACKAGE_FORMAT" = "pacman" ]; then
+-		echo "post_install" > postupg
+-	fi
+-}
