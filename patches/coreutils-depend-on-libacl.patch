@@ -1,0 +1,13 @@
+diff --git a/packages/coreutils/build.sh b/packages/coreutils/build.sh
+index d77b7ab20e..bb6a7522db 100644
+--- a/packages/coreutils/build.sh
++++ b/packages/coreutils/build.sh
+@@ -5,7 +5,7 @@ TERMUX_PKG_MAINTAINER="@termux"
+ TERMUX_PKG_VERSION=9.9
+ TERMUX_PKG_SRCURL=https://mirrors.kernel.org/gnu/coreutils/coreutils-${TERMUX_PKG_VERSION}.tar.xz
+ TERMUX_PKG_SHA256=19bcb6ca867183c57d77155eae946c5eced88183143b45ca51ad7d26c628ca75
+-TERMUX_PKG_DEPENDS="libandroid-selinux, libandroid-support, libgmp, libiconv, openssl (>= 1:3.5.0-1)"
++TERMUX_PKG_DEPENDS="libacl, libandroid-selinux, libandroid-support, libgmp, libiconv, openssl (>= 1:3.5.0-1)"
+ TERMUX_PKG_BREAKS="chroot, busybox (<< 1.30.1-4)"
+ TERMUX_PKG_REPLACES="chroot, busybox (<< 1.30.1-4)"
+ TERMUX_PKG_ESSENTIAL=true

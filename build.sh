@@ -95,6 +95,10 @@ declare -a PATCHES=(
 
     # Link pulseaudio against libiconv to resolve linker errors at build time
     "pulseaudio-link-against-libiconv.patch"
+
+    # `rm` command complains about missing libacl.so after updating packages
+    # This ensures that libacl package is installed before coreutils
+    "coreutils-depend-on-libacl.patch"
 )
 
 # Script configuration
