@@ -30,8 +30,8 @@ script_dir=$(dirname "$script")
 TERMUX_PACKAGES_DIR="$script_dir/termux-packages"
 TERMUX_PACKAGE_NAME="com.termux"
 
-SCRIBE_PACKAGE_NAME="com.scribe"
-SCRIBE_GPG_KEY="$script_dir/scribe-oss.gpg"
+COTG_PACKAGE_NAME="com.itsaky.androidide"
+COTG_GPG_KEY="$script_dir/adfa-dev-team.gpg"
 
 # Configure build environment variables
 TERMUX_SCRIPTDIR="$TERMUX_PACKAGES_DIR"
@@ -95,11 +95,11 @@ declare -a PATCHES=(
 )
 
 # Script configuration
-SCRIBE_ALL_ARCHS=" aarch64 arm i686 x86_64 "
-SCRIBE_ARCH=""
-SCRIBE_EXPLICIT="false"
-SCRIBE_NO_BUILD="false"
-SCRIBE_REPO="https://gitlab.com/scribe-oss/core/scribe-packages-repo/-/raw/main"
+COTG_ALL_ARCHS=" aarch64 arm "
+COTG_ARCH=""
+COTG_EXPLICIT="false"
+COTG_NO_BUILD="false"
+COTG_REPO="https://packages.appdevforall.org/apt/termux-main"
 
 usage() {
     echo "Script to build termux-packages for Scribe"
@@ -107,13 +107,13 @@ usage() {
     echo "Usage: $0 -a ARCH [options] [package...]"
     echo ""
     echo "Options:"
-    echo "  -a        The target architecture. Must be one of [${SCRIBE_ALL_ARCHS}]."
+    echo "  -a        The target architecture. Must be one of [${COTG_ALL_ARCHS}]."
     echo "  -e        Build only the explicitly specified packages."
     echo "  -n        Set up the build, but do not execute."
-    echo "  -p        The package name of the application. Defaults to '${SCRIBE_PACKAGE_NAME}'."
+    echo "  -p        The package name of the application. Defaults to '${COTG_PACKAGE_NAME}'."
     echo "  -r        The repository where the built packages will be published."
-    echo "            Defaults to '${SCRIBE_REPO}'."
-    echo "  -s        The GPG key used for signing packages. Defaults to '${SCRIBE_GPG_KEY}'."
+    echo "            Defaults to '${COTG_REPO}'."
+    echo "  -s        The GPG key used for signing packages. Defaults to '${COTG_GPG_KEY}'."
     echo
     echo "  -h        Show this help message and exit."
     echo ""
@@ -130,7 +130,7 @@ setup_termux_packages() {
     echo "Updating package name.."
     grep -rniF . -e "${TERMUX_PACKAGE_NAME}" -l\
         --exclude-dir=".git" | \
-        xargs -L1 sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${SCRIBE_PACKAGE_NAME}/g" || \
+        xargs -L1 sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${COTG_PACKAGE_NAME}/g" || \
         scribe_error_exit "Unable to update package name"
 
     # Removes existing keyrings
@@ -139,15 +139,15 @@ setup_termux_packages() {
 
     # Add our own keyring
     echo "Adding our keyring..."
-    cp "${SCRIBE_GPG_KEY}" "./packages/termux-keyring/$(basename "$SCRIBE_GPG_KEY")"
+    cp "${COTG_GPG_KEY}" "./packages/termux-keyring/$(basename "$COTG_GPG_KEY")"
 
     # Create termux-keyring.patch
     termux_keyring_patch="$script_dir/patches/termux-keyring.patch"
-    sed "s|@SCRIBE_GPG_KEY@|$(basename "$SCRIBE_GPG_KEY")|g" "${termux_keyring_patch}.in" > "$termux_keyring_patch"
+    sed "s|@COTG_GPG_KEY@|$(basename "$COTG_GPG_KEY")|g" "${termux_keyring_patch}.in" > "$termux_keyring_patch"
 
     # Create termux-tools-update-package-name.patch
     termux_tools_update_package_name_patch="$script_dir/patches/termux-tools-update-package-name.patch"
-    sed "s|@TERMUX_PACKAGE_NAME@|$SCRIBE_PACKAGE_NAME|g" "${termux_tools_update_package_name_patch}.in" > "${termux_tools_update_package_name_patch}"
+    sed "s|@TERMUX_PACKAGE_NAME@|$COTG_PACKAGE_NAME|g" "${termux_tools_update_package_name_patch}.in" > "${termux_tools_update_package_name_patch}"
 
     # Apply patches
     for patch in "${PATCHES[@]}"; do
@@ -159,7 +159,7 @@ setup_termux_packages() {
 
     # Update the packages repository
     grep -rnI . -e "https://packages-cf.termux.dev/apt/termux-main" -l |\
-        xargs -L1 sed -i "s|https://packages-cf.termux.dev/apt/termux-main|${SCRIBE_REPO}|g"
+        xargs -L1 sed -i "s|https://packages-cf.termux.dev/apt/termux-main|${COTG_REPO}|g"
 
     # Marked patched
     touch .scribe-patched
@@ -176,12 +176,12 @@ fi
 # Argument parsing
 while getopts "a:enp:r:s:h" opt; do
     case "$opt" in
-    a) SCRIBE_ARCH="$OPTARG"                         ;;
-    e) SCRIBE_EXPLICIT="true"                        ;;
-    n) SCRIBE_NO_BUILD="true"                        ;;
-    p) SCRIBE_PACKAGE_NAME="$OPTARG"                 ;;
-    r) SCRIBE_REPO="$OPTARG"                         ;;
-    s) SCRIBE_GPG_KEY="$(realpath "$OPTARG")"        ;;
+    a) COTG_ARCH="$OPTARG"                         ;;
+    e) COTG_EXPLICIT="true"                        ;;
+    n) COTG_NO_BUILD="true"                        ;;
+    p) COTG_PACKAGE_NAME="$OPTARG"                 ;;
+    r) COTG_REPO="$OPTARG"                         ;;
+    s) COTG_GPG_KEY="$(realpath "$OPTARG")"        ;;
     h)
         usage
         exit 0
@@ -194,26 +194,26 @@ while getopts "a:enp:r:s:h" opt; do
 done
 shift $((OPTIND - 1))
 
-if [[ "$SCRIBE_ALL_ARCHS" != *" $SCRIBE_ARCH "* ]]; then
-    scribe_error_exit "Unsupported arch: '$SCRIBE_ARCH'"
+if [[ "$COTG_ALL_ARCHS" != *" $COTG_ARCH "* ]]; then
+    scribe_error_exit "Unsupported arch: '$COTG_ARCH'"
 fi
 
-if [[ -z "${SCRIBE_PACKAGE_NAME}" ]]; then
+if [[ -z "${COTG_PACKAGE_NAME}" ]]; then
     scribe_error_exit "A package name must be specified."
 fi
 
-if [[ -z "${SCRIBE_REPO}" ]]; then
+if [[ -z "${COTG_REPO}" ]]; then
     scribe_error_exit "A package repository URL must be specified."
 fi
 
-if ! [[ -f "${SCRIBE_GPG_KEY}" ]]; then
-    scribe_error_exit "${SCRIBE_GPG_KEY} does not exist or is not a file."
+if ! [[ -f "${COTG_GPG_KEY}" ]]; then
+    scribe_error_exit "${COTG_GPG_KEY} does not exist or is not a file."
 fi
 
 # Get extra packages to build
 declare -a EXTRA_PACKAGES=("$@")
 
-OUTPUT_DIR="$script_dir/output/$SCRIBE_ARCH"
+OUTPUT_DIR="$script_dir/output/$COTG_ARCH"
 mkdir -p "${OUTPUT_DIR}"
 
 # Check required commands
@@ -232,16 +232,16 @@ if ! [[ -L "$TERMUX_PACKAGES_DIR/output" ]]; then
     ln -sf "$OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
 fi
 
-if [[ "$SCRIBE_NO_BUILD" == "true" ]]; then
+if [[ "$COTG_NO_BUILD" == "true" ]]; then
     scribe_ok "Skipping build."
     exit 0
 fi
 
 # All the packages that we'll be building
-declare -a SCRIBE_PACKAGES
+declare -a COTG_PACKAGES
 
-if [[ "$SCRIBE_EXPLICIT" != "true" ]]; then
-    SCRIBE_PACKAGES+=(
+if [[ "$COTG_EXPLICIT" != "true" ]]; then
+    COTG_PACKAGES+=(
 
         ## ---- Bootstrap packages ---- ##
 
@@ -290,17 +290,17 @@ if [[ "$SCRIBE_EXPLICIT" != "true" ]]; then
     )
 fi
 
-SCRIBE_PACKAGES+=("${EXTRA_PACKAGES[@]}")
+COTG_PACKAGES+=("${EXTRA_PACKAGES[@]}")
 
 pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
 
 echo
 echo "==="
-echo "Building packages: ${SCRIBE_PACKAGES[*]}"
+echo "Building packages: ${COTG_PACKAGES[*]}"
 echo "==="
 echo
 
-if ! { time ./build-package.sh -a "$SCRIBE_ARCH" -o "$OUTPUT_DIR" "${SCRIBE_PACKAGES[@]}" |&\
+if ! { time ./build-package.sh -a "$COTG_ARCH" -o "$OUTPUT_DIR" "${COTG_PACKAGES[@]}" |&\
     tee "$OUTPUT_DIR/build.log"; }; then
     scribe_error_exit "Failed to build packages."
 fi

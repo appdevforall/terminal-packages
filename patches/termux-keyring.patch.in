@@ -18,7 +18,7 @@ index 81a5cdc0b6..ee3dd56069 100644
 -
 -	# Key for pacman package manager.
 -	install -Dm600 "$TERMUX_PKG_BUILDER_DIR/termux-pacman.gpg" "$GPG_SHARE_DIR"
-+	install -Dm600 "$TERMUX_PKG_BUILDER_DIR/@SCRIBE_GPG_KEY@" "$GPG_SHARE_DIR"
++	install -Dm600 "$TERMUX_PKG_BUILDER_DIR/@COTG_GPG_KEY@" "$GPG_SHARE_DIR"
  
  	# Create symlinks under all GPG_DIRs to key files under GPG_SHARE_DIR
  	for GPG_DIR in "$TERMUX_PREFIX/etc/apt/trusted.gpg.d" "$TERMUX_PREFIX/share/pacman/keyrings"; do
