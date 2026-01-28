@@ -2,7 +2,7 @@
 
 #
 # Copyright (C) 2025 Akash Yadav
-# 
+#
 # This file is part of The Scribe Project.
 #
 # Scribe is free software: you can redistribute it and/or modify
@@ -21,7 +21,12 @@
 
 RED="\033[0;31m"
 GREEN="\033[0;32m"
+BLUE="\033[34m"
 NC="\033[0m"
+
+scribe_info() {
+  printf "${BLUE}%s${NC}\n" "$1"
+}
 
 scribe_ok() {
   printf "${GREEN}%s${NC}\n" "$1"

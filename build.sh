@@ -61,7 +61,7 @@ declare -a PATCHES=(
     "binutils-libs-fix-dependencies.patch"
 
     # libxml2 v2.14.4 has build errors
-    "libxml2-revert-to-2.14.3.patch"
+    # "libxml2-revert-to-2.14.3.patch"
 
     # Remove 'scalar' binary from $PREFIX/bin and make it a symlink
     # to $PREFIX/libexec/git-core/scalar
@@ -151,6 +151,7 @@ setup_termux_packages() {
 
     # Apply patches
     for patch in "${PATCHES[@]}"; do
+        scribe_info "Applying patch: ${patch}"
         if patch -p1 --no-backup-if-mismatch<"$script_dir/patches/$patch" ||\
             scribe_error_exit "Failed to apply '$patch'"; then
             scribe_ok "Applied '$patch'"
@@ -277,16 +278,6 @@ if [[ "$COTG_EXPLICIT" != "true" ]]; then
         "net-tools"
         "patch"
         "unzip"
-
-        ## ---- Plugin packages - C/C++ ---- ##
-        "libllvm"
-
-        ## ---- Plugin packages - Java ---- ##
-        "openjdk-21"
-
-        ## ---- Plugin packages - Python ---- ##
-        "python"
-        "python-pip"
     )
 fi
 

@@ -1,11 +1,11 @@
 diff --git a/packages/binutils-libs/build.sh b/packages/binutils-libs/build.sh
-index 5486721b45..d6aa25d5b1 100644
+index 87b6cecda6..e6354f3afa 100644
 --- a/packages/binutils-libs/build.sh
 +++ b/packages/binutils-libs/build.sh
-@@ -6,7 +6,7 @@ TERMUX_PKG_VERSION="2.44"
- TERMUX_PKG_REVISION=3
- TERMUX_PKG_SRCURL=https://ftp.gnu.org/gnu/binutils/binutils-with-gold-${TERMUX_PKG_VERSION}.tar.xz
- TERMUX_PKG_SHA256=67be9198476cc37436e2801de649f4ad80bf0d02430d86aff63c6b59b6e23987
+@@ -5,7 +5,7 @@ TERMUX_PKG_MAINTAINER="@termux"
+ TERMUX_PKG_VERSION="2.45.1"
+ TERMUX_PKG_SRCURL=https://mirrors.kernel.org/gnu/binutils/binutils-${TERMUX_PKG_VERSION}.tar.xz
+ TERMUX_PKG_SHA256=5fe101e6fe9d18fdec95962d81ed670fdee5f37e3f48f0bef87bddf862513aa5
 -TERMUX_PKG_DEPENDS="zlib, zstd"
 +TERMUX_PKG_DEPENDS="zlib, zstd, libandroid-spawn, libandroid-glob"
  TERMUX_PKG_BREAKS="binutils (<< 2.39), binutils-dev"

@@ -1,16 +1,8 @@
 diff --git a/packages/git/build.sh b/packages/git/build.sh
-index ecaf79198b..9a7ffa85a6 100644
+index 2a525ed2a0..d3bb5cf3dd 100644
 --- a/packages/git/build.sh
 +++ b/packages/git/build.sh
-@@ -42,6 +42,7 @@ TERMUX_PKG_BUILD_IN_SRC=true
- TERMUX_PKG_RM_AFTER_INSTALL="
- bin/git-cvsserver
- bin/git-shell
-+bin/scalar
- libexec/git-core/git-shell
- libexec/git-core/git-cvsserver
- share/man/man1/git-cvsserver.1
-@@ -93,6 +94,7 @@ termux_step_post_make_install() {
+@@ -80,6 +80,7 @@ termux_step_post_make_install() {
  	( # Remove duplicated binaries in bin/ with symlink to the one in libexec/git-core:
  		cd "$TERMUX_PREFIX/bin"
  		ln -sf ../libexec/git-core/git git
