@@ -64,7 +64,7 @@ for arch in "${ARCHS[@]}"; do
 done
 
 # Generate APT repository
-termux-apt-repo --use-hard-links "$debs_dir" "$repo_dir" stable main ||\
+termux-apt-repo "$debs_dir" "$repo_dir" stable main ||\
     scribe_error_exit "Failed to create local API repository"
 
 # Clean
