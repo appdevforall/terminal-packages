@@ -92,6 +92,9 @@ declare -a PATCHES=(
 
     # Restore files and cleanup in second stage
     "scripts-cleanup-in-second-stage.patch"
+
+    # Link pulseaudio against libiconv to resolve linker errors at build time
+    "pulseaudio-link-against-libiconv.patch"
 )
 
 # Script configuration
