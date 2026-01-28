@@ -46,6 +46,9 @@ rm -rf "$repo_dir"
 if ! [ -f "$termux_apt_repo" ]; then
     # Download termux-apt-repo script
     wget https://github.com/termux/termux-apt-repo/raw/refs/heads/master/termux-apt-repo -O "$termux_apt_repo"
+
+    # Make it executable
+    chmod +x "$termux_apt_repo"
 fi
 
 # Create dirs
@@ -64,7 +67,7 @@ for arch in "${ARCHS[@]}"; do
 done
 
 # Generate APT repository
-termux-apt-repo "$debs_dir" "$repo_dir" stable main ||\
+"$termux_apt_repo" "$debs_dir" "$repo_dir" stable main ||\
     scribe_error_exit "Failed to create local API repository"
 
 # Clean
