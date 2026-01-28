@@ -15,14 +15,10 @@ git clone --recurse-submodules https://github.com/appdevforall/terminal-packages
 ### 2. Build packages
 
 ```shell
-./build.sh \
-    -a aarch64 \
-    -p 'com.itsaky.androidide' \
-    -r 'https://packages.appdevforall.org/apt/termux-main/' \
-    -s ./adfa-dev-team.gpg
+./build.sh -a aarch64
 ```
 
-`build.sh` will patch `termux-packages` if needed, set up the output directories and then start building the packages. See [termux-packages WiKi](https://github.com/termux/termux-packages/wiki) for more information about the build system, patches, build scripts, etc.
+`build.sh` will patch `termux-packages` if needed, set up the output directories and then start building the packages. See [termux-packages wiki](https://github.com/termux/termux-packages/wiki) for more information about the build system, patches, build scripts, etc.
 
 The key specified with the `-s` option is the **public key** (**NOT** the private key!), which can be generated using :
 
