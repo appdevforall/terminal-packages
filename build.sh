@@ -239,6 +239,7 @@ if ! [[ -L "$TERMUX_PACKAGES_DIR/output" ]]; then
     rm -rf "$TERMUX_PACKAGES_DIR/output"
 fi
 
+rm -v "$TERMUX_PACKAGES_DIR/output" || true
 ln -sf "$OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
 
 if [[ "$COTG_NO_BUILD" == "true" ]]; then
