@@ -19,26 +19,11 @@
 # along with Scribe.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-set -euo pipefail
-
 script=$(realpath "$0")
 script_dir=$(dirname "$script")
 
-# shellcheck source=utils.sh
-. "$script_dir/utils.sh"
-
-TERMUX_PACKAGES_DIR="$script_dir/termux-packages"
-TERMUX_PACKAGE_NAME="com.termux"
-
-COTG_PACKAGE_NAME="com.itsaky.androidide"
-COTG_GPG_KEY="$script_dir/adfa-dev-team.gpg"
-
-# Configure build environment variables
-TERMUX_SCRIPTDIR="$TERMUX_PACKAGES_DIR"
-export TERMUX_SCRIPTDIR
-
-TERMUX_PKG_API_LEVEL=28
-export TERMUX_PKG_API_LEVEL
+# shellcheck source=common.sh
+. "${script_dir}/common.sh"
 
 declare -a PATCHES=(
 
@@ -102,14 +87,12 @@ declare -a PATCHES=(
 )
 
 # Script configuration
-COTG_ALL_ARCHS=" aarch64 arm "
 COTG_ARCH=""
 COTG_EXPLICIT="false"
 COTG_NO_BUILD="false"
-COTG_REPO="https://packages.appdevforall.org/apt/termux-main"
 
 usage() {
-    echo "Script to build termux-packages for Scribe"
+    echo "Script to build termux-packages for Code On the Go."
     echo ""
     echo "Usage: $0 -a ARCH [options] [package...]"
     echo ""
@@ -221,7 +204,7 @@ fi
 # Get extra packages to build
 declare -a EXTRA_PACKAGES=("$@")
 
-OUTPUT_DIR="$script_dir/output/$COTG_ARCH"
+OUTPUT_DIR="${COTG_OUTPUT_DIR}/$COTG_ARCH"
 mkdir -p "${OUTPUT_DIR}"
 
 # Check required commands
@@ -250,56 +233,10 @@ fi
 # All the packages that we'll be building
 declare -a COTG_PACKAGES
 
-if [[ "$COTG_EXPLICIT" != "true" ]]; then
-    COTG_PACKAGES+=(
-
-        ## ---- Bootstrap packages ---- ##
-
-        # Core utilities.
-        "apt"
-        "bash"
-        "coreutils"
-        "dash"
-        "diffutils"
-        "findutils"
-        "gawk"
-        "grep"
-        "gzip"
-        "less"
-        "libbz2"
-        "procps"
-        "psmisc"
-        "sed"
-        "tar"
-        "termux-core"
-        "termux-exec"
-        "termux-keyring"
-        "termux-tools"
-        "util-linux"
-
-        # Additional.
-        "binutils-libs"
-        "brotli"
-        "coreutils"
-        "debianutils"
-        "dos2unix"
-        "ed"
-        "file"
-        "git"
-        "inetutils"
-        "libsqlite"
-        "lsof"
-        "mandoc"
-        "nano"
-        "net-tools"
-        "openjdk-21"
-        "patch"
-        "python"
-        "unzip"
-        "vim"
-        "which"
-        "zip"
-    )
+if [[ "$COTG_EXPLICIT" == "true" ]]; then
+    # We have been instructed to build only explicitly
+    # specified packages
+    COTG_PACKAGES=()
 fi
 
 COTG_PACKAGES+=("${EXTRA_PACKAGES[@]}")

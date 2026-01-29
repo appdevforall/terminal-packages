@@ -1,5 +1,5 @@
 diff --git a/scripts/generate-bootstraps.sh b/scripts/generate-bootstraps.sh
-index 825f2a886e..20b0af37b2 100755
+index 825f2a886e..0e4ca238a1 100755
 --- a/scripts/generate-bootstraps.sh
 +++ b/scripts/generate-bootstraps.sh
 @@ -280,6 +280,7 @@ add_termux_bootstrap_second_stage_files() {
@@ -10,7 +10,7 @@ index 825f2a886e..20b0af37b2 100755
  	(cd "${BOOTSTRAP_ROOTFS}/${TERMUX_PREFIX}"
  		# Do not store symlinks in bootstrap archive.
  		# Instead, put all information to SYMLINKS.txt
-@@ -288,13 +289,71 @@ create_bootstrap_archive() {
+@@ -288,13 +289,72 @@ create_bootstrap_archive() {
  			rm -f "$link"
  		done < <(find . -type l -print0)
  
@@ -29,7 +29,8 @@ index 825f2a886e..20b0af37b2 100755
 +		if ! [[ -f "$ctsym" ]]; then
 +			# Doesn't exist; continue
 +			echo "[!] JDK $jdk - ct.sym doesn't exist!"
-+			continue
++			echo "[!] ${ctsym}"
++			return 1
 +		fi
 +
 +		ctsym="$(realpath "$ctsym")"
@@ -84,7 +85,7 @@ index 825f2a886e..20b0af37b2 100755
  show_usage() {
  	echo
  	echo "Usage: generate-bootstraps.sh [options]"
-@@ -452,9 +511,7 @@ for package_arch in "${TERMUX_ARCHITECTURES[@]}"; do
+@@ -452,9 +512,7 @@ for package_arch in "${TERMUX_ARCHITECTURES[@]}"; do
  	# Core utilities.
  	pull_package bash # Used by `termux-bootstrap-second-stage.sh`
  	pull_package bzip2
@@ -95,30 +96,3 @@ index 825f2a886e..20b0af37b2 100755
  		pull_package proot
  	fi
  	pull_package coreutils
-@@ -496,9 +553,26 @@ for package_arch in "${TERMUX_ARCHITECTURES[@]}"; do
- 	done
- 	unset add_pkg
- 
-+	# Packages for CoGo -- debug-only
-+	pull_package file
-+	pull_package python
-+	pull_package sqlite
-+	pull_package coreutils
-+	pull_package binutils
-+	pull_package vim
-+	pull_package which
-+
-+	# Packages for CoGo -- debug/release
-+	pull_package brotli
-+	pull_package git
-+	pull_package mandoc
-+	pull_package openjdk-21
-+	pull_package zip
-+
- 	# Add termux bootstrap second stage files
- 	add_termux_bootstrap_second_stage_files "$package_arch"
- 
- 	# Create bootstrap archive.
- 	create_bootstrap_archive "$package_arch"
- done
-+

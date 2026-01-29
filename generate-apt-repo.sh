@@ -24,8 +24,8 @@ set -euo pipefail
 script=$(realpath "$0")
 script_dir=$(dirname "$script")
 
-# Include utilities
-. "$script_dir/utils.sh"
+# shellcheck source=common.sh
+. "$script_dir/common.sh"
 
 # Supported architectures
 declare -a ARCHS=(
@@ -35,7 +35,7 @@ declare -a ARCHS=(
 
 termux_packages="$script_dir/termux-packages"
 output_dir="$script_dir/output"
-repo_dir="$output_dir/repo"
+repo_dir="${COTG_REPO_DIR}"
 debs_dir="$output_dir/debs"
 termux_apt_repo="$output_dir/termux-apt-repo"
 
