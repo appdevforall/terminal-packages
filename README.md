@@ -1,6 +1,7 @@
 # Code on the Go Terminal Packages
 
-Scripts to build [termux-packages](https://github.com/termux/termux-packages) for [Code on the Go](https://github.com/appdevforall/CodeOnTheGo).
+Scripts to build [termux-packages](https://github.com/termux/termux-packages)
+for [Code on the Go](https://github.com/appdevforall/CodeOnTheGo).
 
 ## How to build
 
@@ -73,29 +74,14 @@ Where :
 From the root directory of this repository, use the following command to generate the bootstrap packages :
 
 ```
-./termux-packages/scripts/generate-bootstraps.sh --architectures aarch64,arm -r file://$(pwd)/output/repo -a <extra-packages>
+./generate-bootstrap-archive.sh
 ```
 
-Where `<extra-packages>` are the packages that are specific to the target application. For Code on the CoGo, the following packages are included in `bootstrap-*.zip` in addition to the default ones :
+Run the above script with `-h` to see available options.
 
-<!-- For CoGo maintainers:
-     
-     Please keep the below list up-to-date with all the extra packages we include in CoGo.
--->
-
-- `binutils`
-- `coreutils`
-- `file`
-- `git`
-- `mandoc`
-- `openjdk-21`
-- `python`
-- `sqlite`
-- `zip`
-
-With our changes, this should generate two archives :
-- `bootstrap-<arch>.zip` - bootstrap archive without compression (`zip -0`)
-- `bootstrap-<arch>.zip.br` - this is `bootstrap-<arch>.zip` archive compressed with `brotli` using `-q 11` (max compression).
+The script generates two archives in the `output` directory :
+- `bootstrap-<variant>-<arch>.zip` - bootstrap archive without compression (`zip -0`). This can be used for generating brotli-compressed archive.
+- `bootstrap-<variant>-<arch>.zip.9` - this is `bootstrap-<arch>.zip` archive compressed with max ZIP compression (`zip -9`).
 
 # License
 
