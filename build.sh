@@ -285,6 +285,22 @@ if [[ "$COTG_EXPLICIT" != "true" ]]; then
         "net-tools"
         "patch"
         "unzip"
+
+        # debug-only packages
+        "file"
+        "python"
+        "sqlite"
+        "coreutils"
+        "binutils"
+        "vim"
+        "which"
+
+        # release-only packages
+        "brotli"
+        "git"
+        "mandoc"
+        "openjdk-21"
+        "zip"
     )
 fi
 
