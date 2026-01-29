@@ -277,30 +277,26 @@ if [[ "$COTG_EXPLICIT" != "true" ]]; then
         "util-linux"
 
         # Additional.
-        "ed"
+        "binutils-libs"
+        "brotli"
+        "coreutils"
         "debianutils"
         "dos2unix"
+        "ed"
+        "file"
+        "git"
         "inetutils"
+        "libsqlite"
         "lsof"
+        "mandoc"
         "nano"
         "net-tools"
+        "openjdk-21"
         "patch"
-        "unzip"
-
-        # debug-only packages
-        "file"
         "python"
-        "sqlite"
-        "coreutils"
-        "binutils"
+        "unzip"
         "vim"
         "which"
-
-        # release-only packages
-        "brotli"
-        "git"
-        "mandoc"
-        "openjdk-21"
         "zip"
     )
 fi
