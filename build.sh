@@ -237,8 +237,9 @@ fi
 # Symlink termux-packages/output to OUTPUT_DIR
 if ! [[ -L "$TERMUX_PACKAGES_DIR/output" ]]; then
     rm -rf "$TERMUX_PACKAGES_DIR/output"
-    ln -sf "$OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
 fi
+
+ln -sf "$OUTPUT_DIR" "$TERMUX_PACKAGES_DIR/output"
 
 if [[ "$COTG_NO_BUILD" == "true" ]]; then
     scribe_ok "Skipping build."
