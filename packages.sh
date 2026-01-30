@@ -40,16 +40,20 @@ COTG_PACKAGES__BASE=(
     "util-linux"
 
     # Additional.
+    "brotli"
     "ed"
     "debianutils"
     "dos2unix"
+    "git"
     "inetutils"
     "lsof"
+    "mandoc"
     "nano"
     "net-tools"
     "openjdk-21"
     "patch"
     "unzip"
+    "zip"
 )
 
 # debug-only packages
@@ -64,12 +68,7 @@ COTG_PACKAGES__DEBUG=(
 )
 
 # release-only packages
-COTG_PACKAGES__RELEASE=(
-    "brotli"
-    "git"
-    "mandoc"
-    "zip"
-)
+COTG_PACKAGES__RELEASE=()
 
 # All packages
 COTG_PACKAGES=(
