@@ -65,6 +65,7 @@ COTG_PACKAGES__DEBUG=(
     "python"
     "sqlite"
     "vim"
+    "wget"
     "which"
 )
 
