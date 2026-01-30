@@ -63,6 +63,7 @@ COTG_PACKAGES__DEBUG=(
     "file"
     "libsqlite"
     "python"
+    "sqlite"
     "vim"
     "which"
 )
