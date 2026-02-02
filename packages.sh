@@ -86,7 +86,7 @@ COTG_PACKAGES=(
 COTG_PACKAGES+=(
 
     # Required for self-bootstrapping Code On the Go
-    "libprotobuf",
+    "libprotobuf"
 
     # Commonly used tools
     "wget"
