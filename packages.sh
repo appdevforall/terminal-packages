@@ -63,6 +63,7 @@ COTG_PACKAGES__DEBUG=(
     "file"
     "libsqlite"
     "python"
+    "python-pip"
     "vim"
     "wget"
     "which"
@@ -89,4 +90,9 @@ COTG_PACKAGES+=(
 
     # Commonly used tools
     "wget"
+
+    # cmake and libllvm for Android
+    # useful for Android SDK
+    "cmake"
+    "libllvm"
 )
