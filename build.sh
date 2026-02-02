@@ -84,6 +84,10 @@ declare -a PATCHES=(
     # `rm` command complains about missing libacl.so after updating packages
     # This ensures that libacl package is installed before coreutils
     "coreutils-depend-on-libacl.patch"
+
+    # `libapr-1.so` needs to be linked against libandroid-shmem.so
+    # in order to fix undefined symbol error when building subversion
+    "apr-link-against-libandroid-shmem.patch"
 )
 
 # Script configuration
