@@ -63,7 +63,6 @@ COTG_PACKAGES__DEBUG=(
     "file"
     "libsqlite"
     "python"
-    "sqlite"
     "vim"
     "wget"
     "which"
@@ -77,4 +76,14 @@ COTG_PACKAGES=(
     "${COTG_PACKAGES__BASE[@]}"
     "${COTG_PACKAGES__DEBUG[@]}"
     "${COTG_PACKAGES__RELEASE[@]}"
+)
+
+# Extra packages that need to be available
+# for use in Code On the Go
+# Note: When adding new packages here,
+#   mention the reason for inclusion
+COTG_PACKAGES+=(
+
+    # Required for self-bootstrapping Code On the Go
+    "libprotobuf",
 )
