@@ -1,0 +1,106 @@
+diff --git a/packages/libandroid-shmem/build.sh b/packages/libandroid-shmem/build.sh
+index 7e013d0a65..6fbae7051d 100644
+--- a/packages/libandroid-shmem/build.sh
++++ b/packages/libandroid-shmem/build.sh
+@@ -3,6 +3,7 @@ TERMUX_PKG_DESCRIPTION="System V shared memory emulation on Android using ashmem
+ TERMUX_PKG_LICENSE="BSD 3-Clause"
+ TERMUX_PKG_MAINTAINER="@termux"
+ TERMUX_PKG_VERSION=0.7
++TERMUX_PKG_REVISION=1
+ TERMUX_PKG_SRCURL=https://github.com/termux/libandroid-shmem/archive/refs/tags/v${TERMUX_PKG_VERSION}.tar.gz
+ TERMUX_PKG_SHA256=1e5ff8459bc0a8c229dd8a94b27d119987e09ef3414331c2b5ebfff20b98e867
+ TERMUX_PKG_BREAKS="libandroid-shmem-dev"
+diff --git a/packages/libandroid-shmem/libandroid-shmem-revert-a-shared-memory-patch.patch b/packages/libandroid-shmem/libandroid-shmem-revert-a-shared-memory-patch.patch
+new file mode 100644
+index 0000000000..8ab963a583
+--- /dev/null
++++ b/packages/libandroid-shmem/libandroid-shmem-revert-a-shared-memory-patch.patch
+@@ -0,0 +1,88 @@
++From 402581406770a131497ed825862e9786be5de4d2 Mon Sep 17 00:00:00 2001
++From: Akash Yadav <contact@itsaky.com>
++Date: Tue, 5 May 2026 18:38:49 +0530
++Subject: [PATCH] Revert "Use ASharedMemory if targeting API level 26 or later"
++
++This reverts commit 7f0bd7e25dbdd146265aff7c6a890029e374622d.
++---
++ Makefile |  2 +-
++ shmem.c  | 18 ++++--------------
++ 2 files changed, 5 insertions(+), 15 deletions(-)
++
++diff --git a/Makefile b/Makefile
++index 4a876ae..22bbf8d 100644
++--- a/Makefile
+++++ b/Makefile
++@@ -5,7 +5,7 @@ libandroid-shmem.a: shmem.o
++ 	$(AR) rcu $@ shmem.o
++ 
++ libandroid-shmem.so: shmem.o
++-	$(CC) $(LDFLAGS) -shared shmem.o -o $@ -llog -landroid
+++	$(CC) $(LDFLAGS) -shared shmem.o -o $@ -llog
++ 
++ shmem.o: shmem.c shm.h
++ 	$(CC) $(CFLAGS) -c shmem.c -o $@
++diff --git a/shmem.c b/shmem.c
++index f95fc07..264be33 100644
++--- a/shmem.c
+++++ b/shmem.c
++@@ -1,7 +1,4 @@
++ #include <android/log.h>
++-#if __ANDROID_API__ >= 26
++-#include <android/sharedmem.h>
++-#endif
++ #include <errno.h>
++ #include <pthread.h>
++ #include <stdbool.h>
++@@ -15,10 +12,8 @@
++ #include <unistd.h>
++ #include <paths.h>
++ 
++-#if __ANDROID_API__ < 26
++ #define __u32 uint32_t
++ #include <linux/ashmem.h>
++-#endif
++ 
++ #include "shm.h"
++ 
++@@ -113,14 +108,14 @@ static int ancil_recv_fd(int sock)
++ 
++ static int ashmem_get_size_region(int fd)
++ {
++-#if __ANDROID_API__ >= 26
++-	return ASharedMemory_getSize(fd);
++-#else
+++	//int ret = __ashmem_is_ashmem(fd, 1);
+++	//if (ret < 0) return ret;
++ 	return TEMP_FAILURE_RETRY(ioctl(fd, ASHMEM_GET_SIZE, NULL));
++-#endif
++ }
++ 
++ /*
+++ * From https://android.googlesource.com/platform/system/core/+/master/libcutils/ashmem-dev.c
+++ *
++  * ashmem_create_region - creates a new named ashmem region and returns the file
++  * descriptor, or <0 on error.
++  *
++@@ -129,10 +124,6 @@ static int ashmem_get_size_region(int fd)
++  */
++ static int ashmem_create_region(char const* name, size_t size)
++ {
++-#if __ANDROID_API__ >= 26
++-	return ASharedMemory_create(name, size);
++-#else
++-	// From https://android.googlesource.com/platform/system/core/+/master/libcutils/ashmem-dev.c
++ 	int fd = open("/dev/ashmem", O_RDWR);
++ 	if (fd < 0) return fd;
++ 
++@@ -150,7 +141,6 @@ static int ashmem_create_region(char const* name, size_t size)
++ error:
++ 	close(fd);
++ 	return ret;
++-#endif
++ }
++ 
++ static void ashv_check_pid()
++-- 
++2.53.0
++
