@@ -95,12 +95,18 @@ declare -a PATCHES=(
   # to register native methods of classes. This makes our tooling API server, running in a JVM env,
   # crash due to the obviously missing Android-specific classes.
   "libandroid-shmem-revert-a-shared-memory-patch.patch"
+
+  # termux-packages/build-package.sh contains hardcoded names for keyring files
+  # these keyring files are used when we build packages with the -I flag
+  # since we use a different signing key, we need to update the reference here
+  "use-our-keys-to-install-deps.patch"
 )
 
 # Script configuration
 COTG_ARCH=""
 COTG_EXPLICIT="false"
 COTG_NO_BUILD="false"
+COTG_INSTALL_DEPS="false"
 
 usage() {
   echo "Script to build termux-packages for Code On the Go."
@@ -115,6 +121,7 @@ usage() {
   echo "  -r        The repository where the built packages will be published."
   echo "            Defaults to '${COTG_REPO}'."
   echo "  -s        The GPG key used for signing packages. Defaults to '${COTG_GPG_KEY}'."
+  echo "  -I        Prefer downloading packages from remote repository if the versions match."
   echo
   echo "  -h        Show this help message and exit."
   echo ""
@@ -175,7 +182,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 # Argument parsing
-while getopts "a:enp:r:s:h" opt; do
+while getopts "a:enp:r:s:Ih" opt; do
   case "$opt" in
   a) COTG_ARCH="$OPTARG" ;;
   e) COTG_EXPLICIT="true" ;;
@@ -183,6 +190,7 @@ while getopts "a:enp:r:s:h" opt; do
   p) COTG_PACKAGE_NAME="$OPTARG" ;;
   r) COTG_REPO="$OPTARG" ;;
   s) COTG_GPG_KEY="$(realpath "$OPTARG")" ;;
+  I) COTG_INSTALL_DEPS="true" ;;
   h)
     usage
     exit 0
@@ -259,7 +267,19 @@ echo "Building packages: ${COTG_PACKAGES[*]}"
 echo "==="
 echo
 
-if ! { time ./build-package.sh -a "$COTG_ARCH" -o "$OUTPUT_DIR" "${COTG_PACKAGES[@]}" |&
+declare -a BUILD_ARGS
+BUILD_ARGS=(
+  "-a" "${COTG_ARCH}"
+  "-o" "${OUTPUT_DIR}"
+)
+
+if [[ "${COTG_INSTALL_DEPS}" == "true" ]]; then
+  BUILD_ARGS+=("-I")
+fi
+
+BUILD_ARGS+=("${COTG_PACKAGES[@]}")
+
+if ! { time ./build-package.sh "${BUILD_ARGS[@]}" |&
   tee "$OUTPUT_DIR/build.log"; }; then
   scribe_error_exit "Failed to build packages."
 fi
