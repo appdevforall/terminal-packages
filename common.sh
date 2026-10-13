@@ -20,7 +20,7 @@ TERMUX_PACKAGE_NAME="com.termux"
 export TERMUX_PACKAGE_NAME
 
 # The package name of the intended application
-COTG_PACKAGE_NAME="com.itsaky.androidide"
+COTG_PACKAGE_NAME="org.appdevforall.codeonthego"
 export COTG_PACKAGE_NAME
 
 # Path to the public key
