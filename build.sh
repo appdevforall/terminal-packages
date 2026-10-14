@@ -105,6 +105,11 @@ declare -a PATCHES=(
   # (ncurses pulls foot's terminfo from it). Contents are identical to the
   # 1.25.0 git tag; only the archive packaging differs.
   "foot-update-source-checksum.patch"
+
+  # dos2unix's upstream host (XS4ALL homepages) is gone and serves an HTML
+  # "not found" page. Fetch the identical release tarball from SourceForge;
+  # the pinned SHA-256 is unchanged.
+  "dos2unix-use-sourceforge-mirror.patch"
 )
 
 # Script configuration
