@@ -1,10 +1,37 @@
 stages:
+  - image
   - build
   - publish
 
+# ghcr.io/termux/package-builder only publishes :latest, which tracks the newest
+# termux-packages and drifts from our pinned submodule (e.g. NDK r30 vs r29,
+# python3.14 vs python3.12). Build the builder image from the pinned
+# submodule's own Dockerfile instead, cached per submodule commit.
+builder-image:
+  image: docker:27
+  stage: image
+  services:
+    - docker:27-dind
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    GIT_SUBMODULE_DEPTH: 1
+  script:
+    - SUBMODULE_TAG="$(git -C termux-packages rev-parse --short=12 HEAD)"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    - |
+      if ! docker pull "$CI_REGISTRY_IMAGE/package-builder:$SUBMODULE_TAG"; then
+        docker build -t "$CI_REGISTRY_IMAGE/package-builder:$SUBMODULE_TAG" termux-packages/scripts
+        docker push "$CI_REGISTRY_IMAGE/package-builder:$SUBMODULE_TAG"
+      fi
+    # job images can't use runtime variables, so also tag with the pipeline's commit
+    - docker tag "$CI_REGISTRY_IMAGE/package-builder:$SUBMODULE_TAG" "$CI_REGISTRY_IMAGE/package-builder:$CI_COMMIT_SHA"
+    - docker push "$CI_REGISTRY_IMAGE/package-builder:$CI_COMMIT_SHA"
+
 build-packages:
-  image: ghcr.io/termux/package-builder:latest
+  image: $CI_REGISTRY_IMAGE/package-builder:$CI_COMMIT_SHA
   stage: build
+  needs:
+    - job: builder-image
   timeout: 6h
   tags:
     - saas-linux-xlarge-amd64
