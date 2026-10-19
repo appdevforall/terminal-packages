@@ -1,0 +1,100 @@
+name: Build packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: Space-separated termux-packages names to build
+        required: true
+      arch:
+        description: Target architecture (both builds aarch64 and arm in parallel)
+        type: choice
+        options:
+          - aarch64
+          - arm
+          - both
+        default: aarch64
+      skip_dependencies:
+        description: Build only the named packages, not their dependencies (build-package.sh -s)
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    name: build (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(inputs.arch == 'both' && '["aarch64","arm"]' || format('["{0}"]', inputs.arch)) }}
+    env:
+      PACKAGES: ${{ inputs.packages }}
+      ARCH: ${{ matrix.arch }}
+      SKIP_DEPENDENCIES: ${{ inputs.skip_dependencies }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Free disk space for the builder image
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Build the builder image from the pinned termux-packages
+        run: docker build -t termux-package-builder:pinned termux-packages/scripts
+
+      - name: Build
+        run: |
+          mkdir -p "output/$ARCH"
+          docker run --rm \
+            -e PACKAGES -e ARCH -e SKIP_DEPENDENCIES \
+            -v "$PWD":/home/builder/terminal-packages \
+            -w /home/builder/terminal-packages \
+            termux-package-builder:pinned \
+            bash -c '
+              set -euo pipefail
+              ./build.sh -n -a "$ARCH"
+              cd termux-packages
+              export TERMUX_SCRIPTDIR="$PWD" TERMUX_PKG_API_LEVEL=28
+              args=(-a "$ARCH" -o "/home/builder/terminal-packages/output/$ARCH")
+              if [[ "$SKIP_DEPENDENCIES" == "true" ]]; then args+=(-s); fi
+              read -ra pkgs <<< "$PACKAGES"
+              time ./build-package.sh "${args[@]}" "${pkgs[@]}" 2>&1 | tee "/home/builder/terminal-packages/output/$ARCH/build.log"
+            '
+          ls -la "output/$ARCH"
+
+      - name: Check for leftover com.termux paths
+        run: |
+          shopt -s nullglob
+          failed=0
+          for deb in output/"$ARCH"/*.deb; do
+            package="$(dpkg-deb -f "$deb" Package)"
+            dir="$(mktemp -d)"
+            dpkg-deb -x "$deb" "$dir"
+            hits="$(grep -rlaF "/data/data/com.termux/" "$dir" | sed "s|^$dir||" | tr '\n' ' ' || true)"
+            rm -rf "$dir"
+            if [[ -z "$hits" ]]; then
+              continue
+            fi
+            if grep -qxF "$package" com-termux-path-exceptions.txt; then
+              echo "::notice title=$package::known exception, references /data/data/com.termux/ in: $hits"
+            else
+              echo "::error title=$package::references /data/data/com.termux/ in: $hits"
+              failed=1
+            fi
+          done
+          exit "$failed"
+
+      - name: Archive packages
+        if: always()
+        run: tar -C output -cf "packages-$ARCH.tar" "$ARCH"
+
+      - name: Upload packages
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.arch }}
+          path: packages-${{ matrix.arch }}.tar
+          if-no-files-found: warn

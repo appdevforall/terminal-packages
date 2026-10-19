@@ -83,6 +83,22 @@ The script generates two archives in the `output` directory :
 - `bootstrap-<variant>-<arch>.zip` - bootstrap archive without compression (`zip -0`). This can be used for generating brotli-compressed archive.
 - `bootstrap-<variant>-<arch>.zip.9` - this is `bootstrap-<arch>.zip` archive compressed with max ZIP compression (`zip -9`).
 
+## Build in CI
+
+The **Build packages** workflow (`.github/workflows/build-packages.yml`) builds named packages on GitHub's x86_64 runners. It does not publish them. Run it from **Actions → Build packages → Run workflow**, or :
+
+```shell
+gh workflow run build-packages.yml -f packages="jq tree" -f arch=both
+```
+
+- `packages` - space-separated names from `termux-packages/packages/`.
+- `arch` - `aarch64`, `arm`, or `both` (one job per architecture, in parallel).
+- `skip_dependencies` - build only the named packages (`build-package.sh -s`). Most packages need at least `libandroid-support`, so leave it off unless the package is known to build without its dependencies.
+
+The builder image is built from the pinned submodule's `scripts/Dockerfile`, so its NDK and tools match our recipes. Dependencies are built from source on every run.
+
+Each job uploads `packages-<arch>.tar` with the `.deb` files and `build.log`. A job fails if a built package still contains a `/data/data/com.termux/` path, unless the package is listed in `com-termux-path-exceptions.txt`.
+
 # License
 
 ```
