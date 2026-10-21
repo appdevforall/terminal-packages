@@ -1,0 +1,44 @@
+name: Copy prod packages to stage
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-stage
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Copy the prod bucket into the stage bucket
+        env:
+          PROD_BUCKET: packages-appdevforall-org
+          STAGE_BUCKET: stage-packages-appdevforall-org
+          R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ vars.CLOUDFLARE_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          [[ -n "$R2_ACCOUNT_ID" ]] || { echo "::error::The CLOUDFLARE_ACCOUNT_ID variable is not set"; exit 1; }
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          aws configure set default.s3.multipart_threshold 5GB
+          aws s3 sync "s3://$PROD_BUCKET/" "s3://$STAGE_BUCKET/" --endpoint-url "$endpoint" --no-progress
+
+          objects() {
+            aws s3api list-objects-v2 --bucket "$1" --endpoint-url "$endpoint" --output json |
+              jq -r '.Contents[]? | "\(.Key)\t\(.Size)"' | LC_ALL=C sort
+          }
+          objects "$PROD_BUCKET" > "$RUNNER_TEMP/prod"
+          LC_ALL=C comm -13 <(cut -f1 "$RUNNER_TEMP/prod") <(objects "$STAGE_BUCKET" | cut -f1) | while IFS= read -r key; do
+            aws s3 rm "s3://$STAGE_BUCKET/$key" --endpoint-url "$endpoint"
+          done
+
+          objects "$STAGE_BUCKET" | diff "$RUNNER_TEMP/prod" - > "$RUNNER_TEMP/diff" ||
+            { echo "::error::Stage does not match prod"; cat "$RUNNER_TEMP/diff"; exit 1; }
+          echo "Stage matches prod: $(wc -l < "$RUNNER_TEMP/prod") objects"

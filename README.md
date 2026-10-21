@@ -99,6 +99,16 @@ The builder image is built from the pinned submodule's `scripts/Dockerfile`, so 
 
 Each job uploads `packages-<arch>.tar` with the `.deb` files and `build.log`. A job fails if a built package still contains a `/data/data/com.termux/` path, unless the package is listed in `com-termux-path-exceptions.txt`.
 
+### Publish to R2
+
+Check `publish` to add the built packages to the apt repository on Cloudflare R2. `staging`, on by default, publishes to the `stage-packages-appdevforall-org` bucket; uncheck it to publish to `packages-appdevforall-org`, which serves `packages.appdevforall.org`.
+
+`publish-apt-repo.sh` reads the bucket's current repository and verifies every package against its index. It adds packages that are new or have a higher version, and keeps the published file when the built version is the same or lower. It then regenerates the index with `generate-apt-repo.sh` and signs `InRelease` and `Release.gpg` with the key that matches `adfa-dev-team.gpg`. It uploads the `.deb` files before the index and never deletes a file.
+
+The **Copy prod packages to stage** workflow (`.github/workflows/copy-prod-to-stage.yml`) makes the stage bucket an exact copy of prod.
+
+Both need the repository variables `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_KEY_ID`, and the secrets `CLOUDFLARE_SECRET_ACCESS_KEY` (an R2 key that can read and write both buckets), `TERMUX_PACKAGE_PRIVATE_GPG_KEY` and, if the key has one, `TERMUX_PACKAGE_GPG_PASSPHRASE`.
+
 # License
 
 ```

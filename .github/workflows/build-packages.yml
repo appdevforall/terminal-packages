@@ -18,6 +18,17 @@ on:
         description: Build only the named packages, not their dependencies (build-package.sh -s)
         type: boolean
         default: false
+      publish:
+        description: Publish the built packages to the apt repository on R2
+        type: boolean
+        default: false
+      staging:
+        description: Publish to the stage bucket instead of prod
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -98,3 +109,41 @@ jobs:
           name: packages-${{ matrix.arch }}
           path: packages-${{ matrix.arch }}.tar
           if-no-files-found: warn
+
+  publish:
+    if: inputs.publish
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: publish-${{ inputs.staging && 'stage' || 'prod' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          path: artifacts
+
+      - name: Unpack the built packages
+        run: |
+          mkdir -p output
+          for tarball in artifacts/*/packages-*.tar; do
+            tar -C output -xf "$tarball"
+          done
+
+      - name: Publish
+        env:
+          R2_BUCKET: ${{ inputs.staging && 'stage-packages-appdevforall-org' || 'packages-appdevforall-org' }}
+          R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ vars.CLOUDFLARE_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          TERMUX_PACKAGE_PRIVATE_GPG_KEY: ${{ secrets.TERMUX_PACKAGE_PRIVATE_GPG_KEY }}
+          TERMUX_PACKAGE_GPG_PASSPHRASE: ${{ secrets.TERMUX_PACKAGE_GPG_PASSPHRASE }}
+        run: |
+          [[ -n "$R2_ACCOUNT_ID" ]] || { echo "::error::The CLOUDFLARE_ACCOUNT_ID variable is not set"; exit 1; }
+          export R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          ./publish-apt-repo.sh
