@@ -109,6 +109,10 @@ if [[ -z "${COTG_REPO}" ]]; then
   scribe_error_exit "A package repository URL must be specified."
 fi
 
+# generate-bootstraps.sh repacks the JDK's ct.sym with brotli and does not
+# check the result: without brotli it deletes ct.sym and still reports success.
+scribe_check_command "brotli"
+
 COTG_VARIANT="debug"
 
 declare -a COTG_EXTRA_PACKAGES
