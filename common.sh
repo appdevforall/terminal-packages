@@ -38,7 +38,7 @@ TERMUX_PKG_API_LEVEL=28
 export TERMUX_PKG_API_LEVEL
 
 # The URL of the repository where the packages will be published
-COTG_REPO="https://packages.appdevforall.org/apt/termux-main"
+COTG_REPO="https://packages.appdevforall.org/apt/codeonthego-main"
 export COTG_REPO
 
 # All supported CPU ABIs

@@ -55,7 +55,7 @@ Where `<secret-key-id>` is the ID of the GPG secret key to be used for signing. 
 
 After signing, the contents of the `output/repo` directory can be published to a web hosting service or a S3-compatible storage server. Ensure that the directory structure is same as the repository URL.
 
-For example, if the repository URL is `https://packages.appdevforall.org/apt/termux-main`, then the contents of the `output/repo` directory must be stored in the `apt/termux-main` directory of `packages.appdevforall.org`'s content root (usually, it's something like `/www/public/html/packages.appdevforall.org` in web hosting environments).
+For example, if the repository URL is `https://packages.appdevforall.org/apt/codeonthego-main`, then the contents of the `output/repo` directory must be stored in the `apt/codeonthego-main` directory of `packages.appdevforall.org`'s content root (usually, it's something like `/www/public/html/packages.appdevforall.org` in web hosting environments).
 
 If you have SSH access to the web hosting service, then you can use `rsync` for incremental updates :
 
