@@ -100,6 +100,21 @@ declare -a PATCHES=(
   # these keyring files are used when we build packages with the -I flag
   # since we use a different signing key, we need to update the reference here
   "use-our-keys-to-install-deps.patch"
+
+  # Codeberg regenerated foot's 1.25.0 source archive, changing its SHA-256
+  # (ncurses pulls foot's terminfo from it). Contents are identical to the
+  # 1.25.0 git tag; only the archive packaging differs.
+  "foot-update-source-checksum.patch"
+
+  # dos2unix's upstream host (XS4ALL homepages) is gone and serves an HTML
+  # "not found" page. Fetch the identical release tarball from SourceForge;
+  # the pinned SHA-256 is unchanged.
+  "dos2unix-use-sourceforge-mirror.patch"
+
+  # Upstream moved these releases after termux-packages pinned them (old Apache
+  # releases go to archive.apache.org; nano's dist/latest and giflib's SF folder
+  # moved on). Same files - pinned SHA-256s unchanged.
+  "moved-source-urls.patch"
 )
 
 # Script configuration

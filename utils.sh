@@ -48,7 +48,7 @@ scribe_check_command() {
   fi
 
   if ! [[ "$(command -v "$1")" ]]; then
-    err "'$1' command is not available in PATH. Please install $1."
+    scribe_error "'$1' command is not available in PATH. Please install $1."
     exit 1
   fi
 }
