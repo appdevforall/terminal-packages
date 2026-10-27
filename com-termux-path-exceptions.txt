@@ -1,0 +1,2 @@
+termux-exec
+termux-tools

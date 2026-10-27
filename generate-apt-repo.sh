@@ -45,7 +45,7 @@ rm -rf "$repo_dir"
 
 if ! [ -f "$termux_apt_repo" ]; then
     # Download termux-apt-repo script
-    wget https://github.com/termux/termux-apt-repo/raw/refs/heads/master/termux-apt-repo -O "$termux_apt_repo"
+    wget https://raw.githubusercontent.com/termux/termux-apt-repo/f2bf088281248e8817b913cc778750796ea5dc19/termux-apt-repo -O "$termux_apt_repo"
 
     # Make it executable
     chmod +x "$termux_apt_repo"
