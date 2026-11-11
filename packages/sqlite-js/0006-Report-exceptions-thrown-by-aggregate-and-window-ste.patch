@@ -27,10 +27,10 @@ Claude-Session: https://claude.ai/code/session_01Vh2DAXGyHbMzjSsi2zbrkw
  2 files changed, 36 insertions(+)
 
 diff --git a/src/sqlitejs.c b/src/sqlitejs.c
-index 45d315b..7aaaaa2 100644
+index c56b241..790dc82 100644
 --- a/src/sqlitejs.c
 +++ b/src/sqlitejs.c
-@@ -866,6 +866,9 @@ static void js_execute_common (sqlite3_context *context, JSContext *js_context,
+@@ -896,6 +896,9 @@ static void js_execute_common (sqlite3_context *context, JSContext *js_context,
      JS_FreeValue(js_context, args);
      
      if (return_value) js_value_to_sqlite(context, js_context, result);
@@ -41,10 +41,10 @@ index 45d315b..7aaaaa2 100644
  }
  
 diff --git a/test/main.c b/test/main.c
-index 28211e9..f278cc9 100644
+index cb2f899..0af4d22 100644
 --- a/test/main.c
 +++ b/test/main.c
-@@ -741,6 +741,38 @@ abort_test:
+@@ -790,6 +790,38 @@ abort_test:
      return rc;
  }
  
@@ -83,7 +83,7 @@ index 28211e9..f278cc9 100644
  // MARK: -
  
  int test_report(const char *description, int rc){
-@@ -762,6 +794,7 @@ int main (void) {
+@@ -811,6 +843,7 @@ int main (void) {
      result += test_report("Direct only", test_direct_only());
      result += test_report("Blobs", test_blobs());
      result += test_report("Numbers", test_numbers());

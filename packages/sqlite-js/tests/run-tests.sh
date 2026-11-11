@@ -117,6 +117,16 @@ not_ok() {
 	done
 }
 
+# For a test that needs a tool that is not installed. TAP counts it as
+# passed, so the summary at the end lists the skips.
+skipped=0
+skip() {
+	n=$((n + 1))
+	skipped=$((skipped + 1))
+	elapsed
+	echo "ok $n - $1 # SKIP $2 ($took)"
+}
+
 note() {
 	printf '# %s\n' "$*"
 }
@@ -162,18 +172,21 @@ expect_error() {
 	fi
 }
 
-# expect_nobail NAME PATTERN SQL...: like sql_nobail, the output (errors
-# included) must match the extended regex PATTERN, and the shell must not
-# crash.
+# expect_nobail NAME WANT ERROR SQL...: run as sql_nobail, the statements
+# must print exactly WANT, and exactly one of them must fail, with an error
+# message containing ERROR. The shell must not crash.
 expect_nobail() {
-	local name=$1 pattern=$2 got rc
-	shift 2
-	got=$(sql_nobail "$@" 2>&1)
+	local name=$1 want=$2 error=$3 got err rc
+	local one_error=$'^[^\n]*'"$error"$'[^\n]*$'
+	shift 3
+	got=$(sql_nobail "$@" 2>nobail.err)
 	rc=$?
-	if [[ $rc -lt 128 && $got =~ $pattern ]]; then
+	err=$(<nobail.err)
+	if [[ $rc -lt 128 && $got == "$want" && $err =~ $one_error ]]; then
 		ok "$name"
 	else
-		not_ok "$name" "exit status $rc" "want output matching: $pattern" "got: $got"
+		not_ok "$name" "exit status $rc" "want: $want" "got:  $got" \
+			"want one error containing: $error" "got errors: $err"
 	fi
 }
 
@@ -369,6 +382,14 @@ expect "AC6: JavaScript results reach SQL with the right type" \
 expect "AC6: a function can make a BLOB from a BLOB" $'0\nX\'030201\'' \
 	"SELECT js_create_scalar('reverse_bytes', '(function (args) { return new Uint8Array(args[0]).reverse(); })');" \
 	"SELECT quote(reverse_bytes(x'010203'));"
+expect "AC6: a typed array over a resizable buffer passes its current bytes, after a shrink or a grow" \
+	"X'0707'|1|14|3" \
+	"SELECT quote(js_eval('(function () { const ab = new ArrayBuffer(16, { maxByteLength: 16 }); const u = new Uint8Array(ab); u.fill(7); ab.resize(2); return u; })()')),
+	        length(js_eval('(function () { const ab = new ArrayBuffer(1024 * 1024, { maxByteLength: 1024 * 1024 }); const u = new Uint8Array(ab); ab.resize(1); return u; })()')),
+	        length(js_eval('(function () { const ab = new ArrayBuffer(4, { maxByteLength: 16 }); const u = new Uint8Array(ab, 2); ab.resize(16); return u; })()')),
+	        js_eval('(function () { const ab = new ArrayBuffer(1024 * 1024, { maxByteLength: 1024 * 1024 }); const u = new Uint8Array(ab); ab.resize(3); const r = db.exec(\"SELECT length(?)\", u); r.next(); return r.get(0); })()');"
+expect_error "AC6: a typed array that its shrunken buffer no longer holds is an SQL error" "detached or resized" \
+	"SELECT js_eval('(function () { const ab = new ArrayBuffer(16, { maxByteLength: 16 }); const u = new Uint8Array(ab, 0, 8); ab.resize(4); return u; })()');"
 expect "AC6: text passes byte for byte, non-ASCII included" $'0\n0\n1|1|1' \
 	"$IDENTITY" \
 	"SELECT js_create_scalar('js_length', '(function (args) { return args[0].length; })');" \
@@ -440,25 +461,51 @@ if command -v script >/dev/null 2>&1; then
 		not_ok "AC8: in an interactive session, Ctrl-C stops while (true) {} and sqlite3 keeps running" "got: $got"
 	fi
 else
-	not_ok "AC8: in an interactive session, Ctrl-C stops while (true) {} and sqlite3 keeps running" \
-		"needs script(1); install util-linux"
+	skip "AC8: in an interactive session, Ctrl-C stops while (true) {} and sqlite3 keeps running" \
+		"needs script(1), from the util-linux package"
 fi
 
 # --- AC9: the memory limit ------------------------------------------------------
 
-expect "AC9: the default limit allows 16 MB" "16777216" \
-	"SELECT js_eval('new ArrayBuffer(16 * 1024 * 1024).byteLength');"
-expect_error "AC9: the default limit (64 MB) refuses 128 MB" "out of memory" \
-	"SELECT js_eval('new ArrayBuffer(128 * 1024 * 1024).byteLength');"
+# The default limit is 64 MB: 48 MB fits beside the runtime's own use, and
+# 70 MB does not.
+expect "AC9: the default limit allows 48 MB" "50331648" \
+	"SELECT js_eval('new ArrayBuffer(48 * 1024 * 1024).byteLength');"
+expect_error "AC9: the default limit refuses 70 MB" "out of memory" \
+	"SELECT js_eval('new ArrayBuffer(70 * 1024 * 1024).byteLength');"
 expect_nobail "AC9: code that never stops allocating fails at the limit, and the session stays usable" \
-	"out of memory.*"$'\n'"1,2,3$" \
+	"1,2,3" "out of memory" \
 	"SELECT js_eval('(function () { const a = []; for (;;) a.push(new Array(100000).fill(1)); })()');" \
 	"SELECT js_eval('[1, 2, 3].join()');"
 expect_nobail "AC9: memory held by a global counts until the global is cleared" \
-	"out of memory.*"$'\n'"16777216$" \
+	$'0\n16777216' "out of memory" \
 	"SELECT js_eval('globalThis.keep = new ArrayBuffer(60 * 1024 * 1024); 0');" \
 	"SELECT js_eval('new ArrayBuffer(16 * 1024 * 1024).byteLength');" \
 	"SELECT js_eval('keep = null; new ArrayBuffer(16 * 1024 * 1024).byteLength');"
+
+# QuickJS can crash if it runs out of memory while it creates a context, which
+# every aggregate needs. Aggregates under small limits, and with little memory
+# left under the default one, may fail, but must not crash.
+AGGREGATE="SELECT js_create_aggregate('n_rows', 'n = 0;', '(function (args) { n++; })', '(function () { return n; })');
+WITH v(x) AS (VALUES (1), (2)) SELECT n_rows(x) FROM v;"
+runs=0
+crashes=()
+for kb in 100 140 180 220 260 300 340 380 420; do
+	sql_nobail "SELECT js_set_memory_limit($kb * 1024);" "$AGGREGATE" >/dev/null 2>&1
+	(($? >= 128)) && crashes+=("limit $kb KB")
+	runs=$((runs + 1))
+done
+for kb in 0 1 2 3 4 6 8 12 16; do
+	sql_nobail "SELECT js_eval('globalThis.keep = []; try { for (;;) keep.push(new ArrayBuffer(1024)); } catch (e) {} keep.length -= $kb; 0');" \
+		"$AGGREGATE" >/dev/null 2>&1
+	(($? >= 128)) && crashes+=("$kb KB left")
+	runs=$((runs + 1))
+done
+if [[ ${#crashes[@]} -eq 0 ]]; then
+	ok "AC9: aggregates near the memory limit fail cleanly, never crash ($runs runs)"
+else
+	not_ok "AC9: aggregates near the memory limit fail cleanly, never crash ($runs runs)" "crashed: ${crashes[*]}"
+fi
 # js_set_memory_limit returns NULL, which prints as an empty line.
 expect "AC9: js_set_memory_limit raises the limit" $'\n134217728' \
 	"SELECT js_set_memory_limit(256 * 1024 * 1024);" \
@@ -494,6 +541,9 @@ for trusted in "sqlite3's default" ON; do
 		"$pragma" "INSERT INTO t VALUES (1);"
 done
 expect "AC10: so the trigger never ran" "0" "SELECT count(*) FROM log;"
+# SQLITE_DIRECTONLY is 0x80000 in function_list's flags.
+expect "AC10: every js_* function but js_version is SQLITE_DIRECTONLY" "13|0" \
+	"SELECT count(*), sum(((flags & 0x80000) != 0) != (name <> 'js_version')) FROM pragma_function_list WHERE name LIKE 'js\_%' ESCAPE '\\';"
 # The view is in the database file: SQLite trusts the TEMP schema, which only
 # the session itself can fill.
 DB=$WORK/views.db
@@ -530,8 +580,8 @@ if "$SQLITE3" -bail -batch :memory: "$LOAD_BROTLI" "SELECT 1;" >/dev/null 2>&1; 
 		not_ok "AC12: sqlite-brotli, then sqlite-js: both work in one session" "got: $got"
 	fi
 else
-	not_ok "AC12: sqlite-js and sqlite-brotli load together" \
-		"cannot load $BROTLI_EXT; install the sqlite-brotli package or set BROTLI_EXT"
+	skip "AC12: sqlite-js and sqlite-brotli load together" \
+		"cannot load $BROTLI_EXT; install the sqlite-brotli package, or set BROTLI_EXT"
 fi
 
 echo "1..$n"
@@ -539,4 +589,8 @@ if [[ $failed -ne 0 ]]; then
 	echo "# FAILED $failed of $n"
 	exit 1
 fi
-echo "# passed all $n"
+if [[ $skipped -ne 0 ]]; then
+	echo "# passed all $n, but skipped $skipped: install what they name to run them"
+else
+	echo "# passed all $n"
+fi

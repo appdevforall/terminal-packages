@@ -163,6 +163,9 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
   an "interrupted" error, even if the code catches exceptions, and `sqlite3`
   keeps running.
 - **Stack.** 1 MB by default; `js_set_max_stack_size` changes it.
+- **Collations that fail.** A collation that throws an exception, or runs out
+  of memory, compares the two strings as equal. `ORDER BY` then returns a
+  wrong order rather than an error, so keep collation code simple.
 
 ## Databases from other people
 
@@ -200,8 +203,11 @@ point argument.
 $ bash $PREFIX/share/sqlite-js/run-tests.sh
 ```
 
-They print TAP and exit 0 only if every test passes. With the `sqlite-brotli`
-package installed, they also check that both extensions load together.
+They print TAP and exit 0 only if every test passes. Two tests need other
+packages and are skipped without them: `sqlite-brotli`, to check that both
+extensions load together, and `util-linux`, whose `script` drives an
+interactive `sqlite3` to check that Ctrl-C leaves it running. The last line
+says how many were skipped.
 
 ## License
 

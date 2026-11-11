@@ -15,20 +15,27 @@ Add js_get_bytes(), which gets the bytes of an ArrayBuffer or of the part
 of a buffer that a typed array views, and use it for function results and
 for db.exec() parameters. An empty buffer is an empty BLOB. Returning a
 detached buffer is an error; binding one still binds NULL, as before.
+A typed array's offset and length come from its byteOffset and
+byteLength getters, read before its bytes: one that tracks the length
+of a resizable buffer keeps the length QuickJS recorded when it was
+made, which goes stale when the buffer is resized, and reading it
+after a shrink would read past the buffer. A typed array of fixed
+length that its shrunken buffer no longer holds is an error.
 Document how values convert in both directions in the README.
 
 Add a Blobs test: BLOBs round-trip through a function, typed arrays,
 subarrays and ArrayBuffers made in JavaScript become BLOBs, a function
 can build a BLOB from a BLOB, a detached buffer is an error, and
-db.exec() binds typed arrays and empty buffers as BLOBs.
+db.exec() binds typed arrays and empty buffers as BLOBs. It also checks
+typed arrays over resizable buffers that shrink and grow.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01Vh2DAXGyHbMzjSsi2zbrkw
 ---
- README.md      | 13 ++++++++++
- src/sqlitejs.c | 64 ++++++++++++++++++++++++++++++++++++++++++++------
- test/main.c    | 38 ++++++++++++++++++++++++++++++
- 3 files changed, 108 insertions(+), 7 deletions(-)
+ README.md      | 13 ++++++++
+ src/sqlitejs.c | 82 +++++++++++++++++++++++++++++++++++++++++++++-----
+ test/main.c    | 50 ++++++++++++++++++++++++++++++
+ 3 files changed, 138 insertions(+), 7 deletions(-)
 
 diff --git a/README.md b/README.md
 index ff51b2f..99abfb9 100644
@@ -55,10 +62,10 @@ index ff51b2f..99abfb9 100644
  
  Scalar functions process one row at a time and return a single value. They are useful for data transformation, calculations, text manipulation, etc.
 diff --git a/src/sqlitejs.c b/src/sqlitejs.c
-index 5765567..2c11877 100644
+index 6b48ef2..cb4d75d 100644
 --- a/src/sqlitejs.c
 +++ b/src/sqlitejs.c
-@@ -366,6 +366,38 @@ static void functionjs_free (functionjs_context *fctx) {
+@@ -372,6 +372,56 @@ static void functionjs_free (functionjs_context *fctx) {
  
  // MARK: - Utils -
  
@@ -79,15 +86,33 @@ index 5765567..2c11877 100644
 +    }
 +
 +    if (JS_GetTypedArrayType(value) >= 0) {
-+        size_t offset = 0, length = 0, size = 0;
-+        JSValue buffer = JS_GetTypedArrayBuffer(ctx, value, &offset, &length, NULL);
++        // The offset and length come from the byteOffset and byteLength getters: a typed array
++        // can track the length of a resizable buffer, and the length QuickJS records when the
++        // array is made goes stale when the buffer is resized. They are read before the bytes,
++        // because a getter can run JavaScript, which could resize or detach the buffer.
++        int64_t offset = 0, length = 0;
++        JSValue prop = JS_GetPropertyStr(ctx, value, "byteOffset");
++        int rc = JS_IsException(prop) ? -1 : JS_ToInt64(ctx, &offset, prop);
++        JS_FreeValue(ctx, prop);
++        if (rc < 0) return -1;
++        prop = JS_GetPropertyStr(ctx, value, "byteLength");
++        rc = JS_IsException(prop) ? -1 : JS_ToInt64(ctx, &length, prop);
++        JS_FreeValue(ctx, prop);
++        if (rc < 0) return -1;
++
++        size_t size = 0;
++        JSValue buffer = JS_GetTypedArrayBuffer(ctx, value, NULL, NULL, NULL);
 +        if (JS_IsException(buffer)) return -1;
 +        uint8_t *buf = JS_GetArrayBuffer(ctx, &size, buffer);
 +        // the typed array keeps its buffer alive, so buf stays valid
 +        JS_FreeValue(ctx, buffer);
 +        if (!buf && JS_HasException(ctx)) return -1;
++        if ((offset < 0) || (length < 0) || ((uint64_t)offset > size) || ((uint64_t)length > size - (size_t)offset)) {
++            JS_ThrowRangeError(ctx, "typed array is out of the bounds of its buffer");
++            return -1;
++        }
 +        *pbytes = (buf) ? buf + offset : NULL;
-+        *psize = length;
++        *psize = (size_t)length;
 +        return 1;
 +    }
 +
@@ -97,7 +122,7 @@ index 5765567..2c11877 100644
  static int js_bind_value (JSContext *ctx, sqlite3_stmt *vm, int index, JSValueConst val) {
      if (JS_IsNull(val) || JS_IsUndefined(val)) {
          return sqlite3_bind_null(vm, index);
-@@ -400,14 +432,18 @@ static int js_bind_value (JSContext *ctx, sqlite3_stmt *vm, int index, JSValueCo
+@@ -406,14 +456,18 @@ static int js_bind_value (JSContext *ctx, sqlite3_stmt *vm, int index, JSValueCo
          JS_FreeCString(ctx, str);
          return rc;
      }
@@ -122,7 +147,7 @@ index 5765567..2c11877 100644
      return sqlite3_bind_null(vm, index);
  }
  
-@@ -636,11 +672,25 @@ static void js_value_to_sqlite (sqlite3_context *context, JSContext *js_ctx, JSV
+@@ -642,11 +696,25 @@ static void js_value_to_sqlite (sqlite3_context *context, JSContext *js_ctx, JSV
          return;
      }
      
@@ -150,10 +175,10 @@ index 5765567..2c11877 100644
      sqlite3_result_error(context, "Unsupported JS value type", -1);
  }
 diff --git a/test/main.c b/test/main.c
-index f8e7f78..49aa6a1 100644
+index dfa3306..b6c6a8a 100644
 --- a/test/main.c
 +++ b/test/main.c
-@@ -662,6 +662,43 @@ abort_test:
+@@ -699,6 +699,55 @@ abort_test:
      return rc;
  }
  
@@ -188,6 +213,18 @@ index f8e7f78..49aa6a1 100644
 +    rc = check_query(db, "SELECT js_eval('(function () { const rs = db.exec(\"SELECT quote(?), quote(?)\", new Uint8Array([1, 2]), new ArrayBuffer(0)); rs.next(); return rs.get(0) + \" \" + rs.get(1); })()');", "X'0102' X''");
 +    if (rc != SQLITE_OK) goto abort_test;
 +
++    // a typed array that tracks the length of a resizable buffer has the buffer's current length,
++    // after the buffer shrinks (by 1 MB, so that reading the old length would read far past it)
++    // or grows
++    rc = check_query_v2(db, "SELECT quote(js_eval('(function () { const ab = new ArrayBuffer(16, { maxByteLength: 16 }); const u = new Uint8Array(ab); u.fill(7); ab.resize(2); return u; })()')), length(js_eval('(function () { const ab = new ArrayBuffer(1024 * 1024, { maxByteLength: 1024 * 1024 }); const u = new Uint8Array(ab); ab.resize(1); return u; })()')), length(js_eval('(function () { const ab = new ArrayBuffer(4, { maxByteLength: 16 }); const u = new Uint8Array(ab, 2); ab.resize(16); return u; })()'));", (const char*[]){"X'0707'", "1", "14"}, 3);
++    if (rc != SQLITE_OK) goto abort_test;
++    rc = check_query(db, "SELECT js_eval('(function () { const ab = new ArrayBuffer(1024 * 1024, { maxByteLength: 1024 * 1024 }); const u = new Uint8Array(ab); ab.resize(3); const rs = db.exec(\"SELECT length(?)\", u); rs.next(); return rs.get(0); })()');", "3");
++    if (rc != SQLITE_OK) goto abort_test;
++
++    // a typed array of fixed length that a shrunken buffer no longer holds is an error
++    rc = check_error(db, "SELECT js_eval('(function () { const ab = new ArrayBuffer(16, { maxByteLength: 16 }); const u = new Uint8Array(ab, 0, 8); ab.resize(4); return u; })()');", "detached or resized");
++    if (rc != SQLITE_OK) goto abort_test;
++
 +abort_test:
 +    if (rc != SQLITE_OK && db) printf("Error: %s\n", sqlite3_errmsg(db));
 +    if (db) sqlite3_close(db);
@@ -197,7 +234,7 @@ index f8e7f78..49aa6a1 100644
  // MARK: -
  
  int test_report(const char *description, int rc){
-@@ -681,6 +718,7 @@ int main (void) {
+@@ -718,6 +767,7 @@ int main (void) {
      result += test_report("Interrupt", test_interrupt());
      result += test_report("Memory limit", test_memory_limit());
      result += test_report("Direct only", test_direct_only());

@@ -46,7 +46,7 @@ index 99abfb9..d2cf41b 100644
  ## Scalar Functions
  
 diff --git a/src/sqlitejs.c b/src/sqlitejs.c
-index 2c11877..45d315b 100644
+index cb4d75d..c56b241 100644
 --- a/src/sqlitejs.c
 +++ b/src/sqlitejs.c
 @@ -11,6 +11,7 @@
@@ -57,7 +57,7 @@ index 2c11877..45d315b 100644
  #include "sqlitejs.h"
  #include "quickjs.h"
  #include "quickjs-libc.h"
-@@ -366,6 +367,18 @@ static void functionjs_free (functionjs_context *fctx) {
+@@ -372,6 +373,18 @@ static void functionjs_free (functionjs_context *fctx) {
  
  // MARK: - Utils -
  
@@ -76,7 +76,7 @@ index 2c11877..45d315b 100644
  // Gets the bytes of an ArrayBuffer, or of the part of an ArrayBuffer that a typed array such
  // as a Uint8Array views: the forms a BLOB takes in JavaScript (a BLOB arrives as an
  // ArrayBuffer). Returns 1 and sets *pbytes and *psize if value is one of them (*pbytes may be
-@@ -410,7 +423,9 @@ static int js_bind_value (JSContext *ctx, sqlite3_stmt *vm, int index, JSValueCo
+@@ -434,7 +447,9 @@ static int js_bind_value (JSContext *ctx, sqlite3_stmt *vm, int index, JSValueCo
              return sqlite3_bind_int(vm, index, num);
          } else {
              double num;
@@ -86,7 +86,7 @@ index 2c11877..45d315b 100644
              return sqlite3_bind_double(vm, index, num);
          }
      }
-@@ -636,8 +651,10 @@ static void js_value_to_sqlite (sqlite3_context *context, JSContext *js_ctx, JSV
+@@ -660,8 +675,10 @@ static void js_value_to_sqlite (sqlite3_context *context, JSContext *js_ctx, JSV
              sqlite3_result_int(context, num);
          } else {
              double num;
@@ -99,10 +99,10 @@ index 2c11877..45d315b 100644
          return;
      }
 diff --git a/test/main.c b/test/main.c
-index 49aa6a1..28211e9 100644
+index b6c6a8a..cb2f899 100644
 --- a/test/main.c
 +++ b/test/main.c
-@@ -699,6 +699,48 @@ abort_test:
+@@ -748,6 +748,48 @@ abort_test:
      return rc;
  }
  
@@ -151,7 +151,7 @@ index 49aa6a1..28211e9 100644
  // MARK: -
  
  int test_report(const char *description, int rc){
-@@ -719,6 +761,7 @@ int main (void) {
+@@ -768,6 +810,7 @@ int main (void) {
      result += test_report("Memory limit", test_memory_limit());
      result += test_report("Direct only", test_direct_only());
      result += test_report("Blobs", test_blobs());
