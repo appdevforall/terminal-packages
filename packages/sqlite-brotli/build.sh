@@ -3,6 +3,7 @@ TERMUX_PKG_DESCRIPTION="SQLite extension adding the encodeBrotli and decodeBrotl
 TERMUX_PKG_LICENSE="GPL-3.0"
 TERMUX_PKG_MAINTAINER="@appdevforall"
 TERMUX_PKG_VERSION=1.0.0
+TERMUX_PKG_REVISION=1
 TERMUX_PKG_DEPENDS="brotli"
 TERMUX_PKG_BUILD_DEPENDS="libsqlite"
 TERMUX_PKG_RECOMMENDS="sqlite"
@@ -25,6 +26,7 @@ termux_step_make_install() {
 	install -Dm600 sqlite-brotli.so "$TERMUX_PREFIX/lib/sqlite-brotli.so"
 	install -Dm600 "$TERMUX_PKG_BUILDER_DIR/README.md" \
 		"$TERMUX_PREFIX/share/doc/sqlite-brotli/README.md"
-	install -Dm600 "$TERMUX_PKG_BUILDER_DIR/tests/run-tests.sh" \
+	# Executable, so it runs directly as well as with bash.
+	install -Dm700 "$TERMUX_PKG_BUILDER_DIR/tests/run-tests.sh" \
 		"$TERMUX_PREFIX/share/sqlite-brotli/run-tests.sh"
 }

@@ -141,14 +141,20 @@ sed_escape() {
   printf '%s\n' "$1" | sed -e 's/[.[\*^$/]/\\&/g' -e 's/\\/\\\\/g' -e 's/#/\\#/g'
 }
 
+# Replaces the Termux package name with ours in the text files under $1.
+# Binary files are left alone, and file names may contain any character.
+update_package_name() {
+  # grep exits 1 when no file matches, which is not a failure here.
+  { grep -rlIZF --exclude-dir=".git" -e "${TERMUX_PACKAGE_NAME}" -- "$1" || [[ $? -eq 1 ]]; } |
+    xargs -0 -r sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${COTG_PACKAGE_NAME}/g"
+}
+
 setup_termux_packages() {
   pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
 
   # Change package name
   echo "Updating package name.."
-  grep -rniF . -e "${TERMUX_PACKAGE_NAME}" -l --exclude-dir=".git" |
-    xargs -L1 sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${COTG_PACKAGE_NAME}/g" ||
-    scribe_error_exit "Unable to update package name"
+  update_package_name . || scribe_error_exit "Unable to update package name"
 
   # Removes existing keyrings
   echo "Removing existing GPG keys..."
@@ -189,7 +195,11 @@ setup_termux_packages() {
 COTG_OWN_PACKAGE_MARKER=".cotg-own-package"
 
 # Copies our own packages (packages/<name>/) into termux-packages/packages/.
-# Runs on every build, unlike the patches, so edits to them are always built.
+# Runs on every build, unlike the patches, so the copies always match
+# packages/. A build in the same container still skips a package it already
+# built at the same version, and publishing keeps a published file of the
+# same version, so a change must raise TERMUX_PKG_VERSION or
+# TERMUX_PKG_REVISION to reach users.
 # They must be new packages: a change to an upstream package is a patch in
 # PATCHES.
 sync_own_packages() {
@@ -221,15 +231,14 @@ sync_own_packages() {
       fi
     done
 
+    # The marker goes in before the files, so a copy cut short is still known
+    # as ours and is replaced on the next run.
     rm -rf "$dest"
-    cp -r "$pkg_dir" "$dest" || scribe_error_exit "Unable to copy package '$pkg_name'"
-    touch "$dest/$COTG_OWN_PACKAGE_MARKER"
+    { mkdir "$dest" && touch "$dest/$COTG_OWN_PACKAGE_MARKER" && cp -r "$pkg_dir." "$dest/"; } ||
+      scribe_error_exit "Unable to copy package '$pkg_name'"
 
     # The same package name update setup_termux_packages makes upstream.
-    # grep exits 1 when nothing matches, which pipefail would treat as failure.
-    { grep -rlF "${TERMUX_PACKAGE_NAME}" "$dest" || true; } |
-      xargs -r -L1 sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${COTG_PACKAGE_NAME}/g" ||
-      scribe_error_exit "Unable to update package name in '$pkg_name'"
+    update_package_name "$dest" || scribe_error_exit "Unable to update package name in '$pkg_name'"
 
     scribe_ok "Copied package '$pkg_name'"
   done

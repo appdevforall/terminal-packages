@@ -9,7 +9,7 @@
 #
 #   -d DOCS_DB    Also decode every Brotli row of this documentation database
 #                 with its CompressionDictionary. Opened read-only.
-#   -x HELLO_EXT  Also load this hello-world extension and call hello().
+#   -x HELLO_EXT  Also load this hello-world extension (hello.c), call hello().
 #
 # Environment:
 #   SQLITE3  the sqlite3 shell to test           (default: sqlite3)
@@ -50,6 +50,31 @@ done
 if [[ $EXT == */* && $EXT != /* ]]; then
 	EXT=$(cd "$(dirname "$EXT")" && pwd)/$(basename "$EXT")
 fi
+
+# File paths come from the command line and TMPDIR, so they may hold quotes,
+# spaces or URI characters. These quote one for each place a path goes.
+
+# As an SQL string literal.
+sql_str() {
+	printf "'%s'" "${1//\'/\'\'}"
+}
+
+# As a sqlite3 shell dot-command argument: in double quotes, the shell reads
+# backslash escapes.
+dot_arg() {
+	local s=${1//\\/\\\\}
+	printf '"%s"' "${s//\"/\\\"}"
+}
+
+# As the path in an SQLite file: URI, which decodes %HH and ends at ? or #.
+uri_path() {
+	local s=${1//\%/%25}
+	s=${s//\?/%3F}
+	s=${s//\#/%23}
+	printf '%s' "${s// /%20}"
+}
+
+LOAD_EXT=".load $(dot_arg "$EXT")"
 
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/sqlite-brotli-tests.XXXXXX") || exit 1
 trap 'rm -rf "$WORK"' EXIT
@@ -95,7 +120,7 @@ note() {
 
 # Runs SQL against the test database, with the extension loaded.
 sql() {
-	"$SQLITE3" -bail -batch -noheader -cmd ".load '$EXT'" "$DB" "$@"
+	"$SQLITE3" -bail -batch -noheader -cmd "$LOAD_EXT" "$DB" "$@"
 }
 
 # expect NAME WANT SQL...: the SQL must succeed and print exactly WANT.
@@ -146,7 +171,7 @@ note "extension: $EXT"
 # --- Acceptance criterion 1: the hello-world extension loads ----------------
 
 if [[ -n $HELLO_EXT ]]; then
-	got=$("$SQLITE3" -bail -batch :memory: ".load '$HELLO_EXT'" "SELECT hello();" 2>&1)
+	got=$("$SQLITE3" -bail -batch :memory: ".load $(dot_arg "$HELLO_EXT")" "SELECT hello();" 2>&1)
 	if [[ $got == "Hello, world" ]]; then
 		ok "AC1: hello-world extension loads and hello() runs"
 	else
@@ -163,7 +188,17 @@ expect "AC2: loads in a fresh session; function_list shows both functions" \
 	"SELECT group_concat(f, ';') FROM (SELECT name || '|' || group_concat(narg, ',') AS f FROM (SELECT name, narg FROM pragma_function_list WHERE name IN ('encodebrotli', 'decodebrotli') ORDER BY name, narg) GROUP BY name ORDER BY name);"
 
 expect "loading the extension twice in one session is harmless" "1" \
-	".load '$EXT'" "SELECT decodeBrotli(encodeBrotli('x', x'0102030405060708')) IS NOT NULL;"
+	"$LOAD_EXT" "SELECT decodeBrotli(encodeBrotli('x', x'0102030405060708')) IS NOT NULL;"
+
+# With trusted_schema off, which the sqlite3 shell sets, only functions
+# registered as innocuous can run from the schema: views, triggers, CHECK
+# constraints and generated columns.
+sql "CREATE VIEW innocuous_view AS SELECT CAST(decodeBrotli(encodeBrotli('hello')) AS TEXT) AS t;
+     CREATE TABLE innocuous_gen (x TEXT, c BLOB AS (encodeBrotli(x)) STORED);" ||
+	not_ok "create a view and a generated column that use the functions"
+expect "the functions work in a view and a generated column with trusted_schema off" "hello|1" \
+	"PRAGMA trusted_schema = OFF;" "INSERT INTO innocuous_gen (x) VALUES ('abc');" \
+	"SELECT (SELECT t FROM innocuous_view), (SELECT CAST(decodeBrotli(c) AS TEXT) = 'abc' FROM innocuous_gen);"
 
 # --- Test data ---------------------------------------------------------------
 #
@@ -280,7 +315,7 @@ expect_error "AC6: a stream with an invalid header byte is an SQL error" "decode
 # never happen is a crash. The stream is of this script: varied text gives
 # varied Brotli codes, where random hex mostly gives fixed-length literal
 # codes that any byte change leaves valid. (|| yields TEXT, hence the CASTs.)
-sql "CREATE TABLE corrupt AS SELECT encodeBrotli(readfile('$SELF')) AS c;"
+sql "CREATE TABLE corrupt AS SELECT encodeBrotli(readfile($(sql_str "$SELF"))) AS c;"
 corrupt_len=$(sql "SELECT length(c) FROM corrupt;")
 corrupt_errors=0
 corrupt_decoded=0
@@ -421,7 +456,7 @@ if [[ -n $DOCS_DB ]]; then
 	    WHERE T.compression = 'brotli'
 	      AND length(C.content) < 1048576
 	      AND NOT EXISTS (SELECT 1 FROM heads H WHERE C.path GLOB H.path || '-[0-9]*'))"
-	attach="ATTACH 'file:$DOCS_DB?mode=ro' AS docs;"
+	attach="ATTACH $(sql_str "file:$(uri_path "$DOCS_DB")?mode=ro") AS docs;"
 	total=$(sql "$attach" "WITH $rows SELECT count(*) FROM r;")
 	expect "documentation database: all $total Brotli rows decode with its dictionary" "$total" \
 		"$attach" "WITH $rows SELECT count(*) FROM r WHERE decodeBrotli(content, $dict) IS NOT NULL;"
@@ -486,7 +521,7 @@ expect "AC10: example 2's row decodes to the file" "1" \
 	"SELECT decodeBrotli(content, (SELECT data FROM CompressionDictionary WHERE id = 1)) = readfile('q/x.html') FROM Content WHERE path = 'q/x.html';"
 
 expect_cmd "AC10: example 3 (built-in dictionary, explicit quality and window) runs as written" \
-	"$SQLITE3" -bail -batch -noheader -cmd ".load '$EXT'" "$DB" \
+	"$SQLITE3" -bail -batch -noheader -cmd "$LOAD_EXT" "$DB" \
 	"SELECT encodeBrotli(READFILE('q/x.html'), NULL, 11, 22);"
 expect "AC10: example 3's output decodes to the file" "1" \
 	"SELECT decodeBrotli(encodeBrotli(READFILE('q/x.html'), NULL, 11, 22)) = readfile('q/x.html');"

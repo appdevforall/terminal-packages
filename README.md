@@ -23,7 +23,7 @@ git clone --recurse-submodules https://github.com/appdevforall/terminal-packages
 
 #### Our own packages
 
-Packages that are not in `termux-packages` live in `packages/<name>/`, laid out like a `termux-packages` package (`build.sh` and any sources it builds). On every run, after patching, `build.sh` copies each of them into `termux-packages/packages/`, so they build like any other package and edits to them are always picked up. A change to an upstream package belongs in a patch instead: `build.sh` stops if one of our packages has the name of an upstream package or subpackage.
+Packages that are not in `termux-packages` live in `packages/<name>/`, laid out like a `termux-packages` package (`build.sh` and any sources it builds). On every run, after patching, `build.sh` copies each of them into `termux-packages/packages/`, so they build like any other package and the copies always match `packages/`. To ship a change to one, raise `TERMUX_PKG_VERSION` or `TERMUX_PKG_REVISION` in its `build.sh`: `build-package.sh` skips a package it already built at the same version in the same container, and publishing keeps a published file of the same version. A change to an upstream package belongs in a patch instead: `build.sh` stops if one of our packages has the name of an upstream package or subpackage.
 
 | Package | What it is |
 |---------|------------|

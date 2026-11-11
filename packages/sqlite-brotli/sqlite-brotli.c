@@ -420,7 +420,9 @@ static void decode_func(sqlite3_context *ctx, int argc, sqlite3_value **argv) {
         goto done;
       }
       if (grown == GROW_TOOBIG) {
-        /* Stops a decompression bomb before it exhausts memory. */
+        /* SQLite's length limit is the only cap on the result. Its default,
+        ** 1,000,000,000 bytes, can be more than a phone lets one process
+        ** allocate, so the README says to lower it for untrusted input. */
         sqlite3_result_error_toobig(ctx);
         goto done;
       }
@@ -464,8 +466,12 @@ __attribute__((visibility("default")))
 #endif
 int sqlite3_sqlitebrotli_init(
     sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi) {
-  /* Deterministic: the same arguments always give the same bytes. */
-  const int flags = SQLITE_UTF8 | SQLITE_DETERMINISTIC;
+  /* Deterministic: the same arguments always give the same bytes.
+  ** Innocuous: no side effects, so views, triggers, CHECK constraints and
+  ** generated columns can use them with trusted_schema off, which the
+  ** sqlite3 shell sets. */
+  const int flags =
+      SQLITE_UTF8 | SQLITE_DETERMINISTIC | SQLITE_INNOCUOUS;
   EncoderCache *cache;
   int rc = SQLITE_OK;
   int nArg;

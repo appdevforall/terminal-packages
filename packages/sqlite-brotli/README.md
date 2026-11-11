@@ -44,7 +44,12 @@ $ echo ".load $PREFIX/lib/sqlite-brotli" >> ~/.sqliterc
   decoded text with `CAST(decodeBrotli(...) AS TEXT)`.
 - Invalid arguments, corrupt or truncated input, and trailing bytes after the
   stream are SQL errors. So is a decoded result over SQLite's length limit
-  (`SQLITE_LIMIT_LENGTH`, 1,000,000,000 bytes by default).
+  (`SQLITE_LIMIT_LENGTH`, 1,000,000,000 bytes by default). That default is
+  more memory than a phone may give one process, so before decoding data you
+  do not trust, lower it, for example to 100 MB: `.limit length 100000000`.
+- Both functions are deterministic and innocuous, so views, triggers, `CHECK`
+  constraints and generated columns can use them, even though the `sqlite3`
+  shell turns `trusted_schema` off.
 - Code on the Go's documentation pipeline encodes with quality 11 and
   `lgwin` 24. Pass both to match it: `encodeBrotli(x, dict, 11, 24)`.
 
@@ -106,3 +111,17 @@ $ bash $PREFIX/share/sqlite-brotli/run-tests.sh -d path/to/documentation.db
 
 `-d` also decodes every Brotli row of a documentation database. Run with `-h`
 for the other options.
+
+Acceptance criterion 1 loads a hello-world extension given with `-x`. Its
+source is `tests/hello.c` in this package's directory of the
+`terminal-packages` repository. Build it for the machine that runs the tests,
+for example on Linux, where `sqlite3ext.h` comes from `libsqlite3-dev`:
+
+```text
+$ cc -shared -fPIC -o hello.so tests/hello.c
+$ bash tests/run-tests.sh -x hello.so
+```
+
+For a phone, build it with the Android NDK's `clang` for the phone's
+architecture. Keep the name `hello.so`: SQLite finds the entry point,
+`sqlite3_hello_init`, from the file name.
