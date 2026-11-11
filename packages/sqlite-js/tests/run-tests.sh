@@ -433,35 +433,44 @@ DB=$WORK/test.db
 
 # --- AC8: Ctrl-C stops runaway JavaScript -----------------------------------
 
-expect_sigint_stops "AC8: SIGINT (Ctrl-C) stops while (true) {} in js_eval" \
-	"SELECT js_eval('while (true) {}');"
-expect_sigint_stops "AC8: SIGINT stops an endless scalar function" \
-	"SELECT js_create_scalar('forever', '(function (args) { for (;;) {} })');" "SELECT forever(1);"
+# Each runaway loop gives up after 20 s, long after the tests expect Ctrl-C to
+# have stopped it, so that a build where Ctrl-C does nothing leaves no sqlite3
+# behind: timeout(1) below can stop script(1), but not the sqlite3 it runs.
+RUNAWAY='for (const end = Date.now() + 20000; Date.now() < end;) {}'
+expect_sigint_stops "AC8: SIGINT (Ctrl-C) stops a runaway loop in js_eval" \
+	"SELECT js_eval('$RUNAWAY');"
+expect_sigint_stops "AC8: SIGINT stops a runaway scalar function" \
+	"SELECT js_create_scalar('forever', '(function (args) { $RUNAWAY })');" "SELECT forever(1);"
 expect_sigint_stops "AC8: SIGINT stops code that catches every exception" \
-	"SELECT js_eval('for (;;) { try { while (true) {} } catch (e) {} }');"
+	"SELECT js_eval('for (const end = Date.now() + 20000; Date.now() < end;) { try { while (Date.now() < end) {} } catch (e) {} }');"
 
 # In batch mode the shell exits after an interrupt, whatever stopped; only an
 # interactive session goes on. script(1) runs one on a pseudo-terminal, where
 # the byte 0x03 is Ctrl-C.
 if command -v script >/dev/null 2>&1; then
 	cmd=$(printf '%q ' "$SQLITE3" -noheader -cmd "$LOAD_EXT" "$DB")
+	# The shell also reports "interrupted" once the loop ends by itself, so the
+	# session must end well before the loop's 20 s are up: about 5 s if Ctrl-C works.
+	started=$SECONDS
 	got=$({
 		sleep 1
-		printf '%s\n' "SELECT js_eval('while (true) {}');"
+		printf '%s\n' "SELECT js_eval('$RUNAWAY');"
 		sleep 2
 		printf '\003'
 		sleep 1
 		printf '%s\n' "SELECT 'still' || ' alive';"
 		sleep 1
 		printf '.quit\n'
-	} | timeout 30 script -q -c "$cmd" /dev/null 2>&1 | tr -d '\r')
-	if [[ $got == *interrupted* && $got == *"still alive"* ]]; then
-		ok "AC8: in an interactive session, Ctrl-C stops while (true) {} and sqlite3 keeps running"
+	} | timeout -k 5 30 script -q -c "$cmd" /dev/null 2>&1 | tr -d '\r')
+	seconds=$((SECONDS - started))
+	if [[ $got == *interrupted* && $got == *"still alive"* && $seconds -lt 15 ]]; then
+		ok "AC8: in an interactive session, Ctrl-C stops a runaway loop and sqlite3 keeps running"
 	else
-		not_ok "AC8: in an interactive session, Ctrl-C stops while (true) {} and sqlite3 keeps running" "got: $got"
+		not_ok "AC8: in an interactive session, Ctrl-C stops a runaway loop and sqlite3 keeps running" \
+			"took $seconds s, want under 15" "got: $got"
 	fi
 else
-	skip "AC8: in an interactive session, Ctrl-C stops while (true) {} and sqlite3 keeps running" \
+	skip "AC8: in an interactive session, Ctrl-C stops a runaway loop and sqlite3 keeps running" \
 		"needs script(1), from the util-linux package"
 fi
 
@@ -473,9 +482,11 @@ expect "AC9: the default limit allows 48 MB" "50331648" \
 	"SELECT js_eval('new ArrayBuffer(48 * 1024 * 1024).byteLength');"
 expect_error "AC9: the default limit refuses 70 MB" "out of memory" \
 	"SELECT js_eval('new ArrayBuffer(70 * 1024 * 1024).byteLength');"
-expect_nobail "AC9: code that never stops allocating fails at the limit, and the session stays usable" \
+# The allocation loops stop at about 4 times the 64 MB default, so that a build
+# without the limit fails the test rather than exhausting the device's memory.
+expect_nobail "AC9: code that keeps allocating fails at the limit, and the session stays usable" \
 	"1,2,3" "out of memory" \
-	"SELECT js_eval('(function () { const a = []; for (;;) a.push(new Array(100000).fill(1)); })()');" \
+	"SELECT js_eval('(function () { const a = []; for (let i = 0; i < 160; i++) a.push(new Array(100000).fill(1)); })()');" \
 	"SELECT js_eval('[1, 2, 3].join()');"
 expect_nobail "AC9: memory held by a global counts until the global is cleared" \
 	$'0\n16777216' "out of memory" \
@@ -496,7 +507,7 @@ for kb in 100 140 180 220 260 300 340 380 420; do
 	runs=$((runs + 1))
 done
 for kb in 0 1 2 3 4 6 8 12 16; do
-	sql_nobail "SELECT js_eval('globalThis.keep = []; try { for (;;) keep.push(new ArrayBuffer(1024)); } catch (e) {} keep.length -= $kb; 0');" \
+	sql_nobail "SELECT js_eval('globalThis.keep = []; try { for (let i = 0; i < 262144; i++) keep.push(new ArrayBuffer(1024)); } catch (e) {} keep.length -= $kb; 0');" \
 		"$AGGREGATE" >/dev/null 2>&1
 	(($? >= 128)) && crashes+=("$kb KB left")
 	runs=$((runs + 1))
