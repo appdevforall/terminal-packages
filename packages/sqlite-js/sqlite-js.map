@@ -1,0 +1,12 @@
+/*
+ * Linker version script for sqlite-js.so: export only the entry points.
+ * sqlite3_js_init is upstream's; sqlite3_sqlitejs_init is the name SQLite
+ * derives from the file name, added with --defsym (see build.sh).
+ */
+{
+	global:
+		sqlite3_js_init;
+		sqlite3_sqlitejs_init;
+	local:
+		*;
+};

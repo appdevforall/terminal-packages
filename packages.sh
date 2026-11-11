@@ -99,4 +99,8 @@ COTG_PACKAGES+=(
     # Brotli functions for the sqlite3 shell, used to maintain
     # documentation.db (ADFA-6635). Built from packages/sqlite-brotli.
     "sqlite-brotli"
+
+    # SQL functions written in JavaScript for the sqlite3 shell
+    # (ADFA-7081). Built from packages/sqlite-js.
+    "sqlite-js"
 )
