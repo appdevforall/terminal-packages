@@ -191,8 +191,42 @@ setup_termux_packages() {
   popd || scribe_error_exit "Unable to popd from termux-packages"
 }
 
-# Marks our copies in termux-packages, to tell them apart from upstream packages.
+# Marks our copies in termux-packages, so the cleanup removes only folders it
+# made. Whether a package is upstream's is for git to say: a marker can
+# outlast a checkout of a newer termux-packages that adds a package of the
+# same name.
 COTG_OWN_PACKAGE_MARKER=".cotg-own-package"
+
+# Runs git in termux-packages. It drops git variables inherited from a caller,
+# such as GIT_DIR or GIT_INDEX_FILE in a git hook, which would make git answer
+# for another repository or index.
+termux_packages_git() {
+  (
+    local -a git_vars
+    mapfile -t git_vars < <(git rev-parse --local-env-vars)
+    unset "${git_vars[@]}"
+    git -C "$TERMUX_PACKAGES_DIR" "$@"
+  )
+}
+
+# Stops the build unless termux-packages is a git checkout of its own, so that
+# git answers for it and not for a repository around it.
+check_termux_packages_checkout() {
+  local toplevel
+  toplevel="$(termux_packages_git rev-parse --show-toplevel)" ||
+    scribe_error_exit "Unable to read termux-packages with git; see git's message above"
+  [[ "$(realpath "$toplevel")" == "$(realpath "$TERMUX_PACKAGES_DIR")" ]] ||
+    scribe_error_exit "termux-packages is not a git checkout of its own (git found '$toplevel'); run 'git submodule update --init'"
+}
+
+# Succeeds if git tracks a file under $1, a path inside termux-packages.
+# Stops the build if git cannot answer.
+termux_packages_tracks() {
+  local files
+  files="$(termux_packages_git --literal-pathspecs ls-files -- "$1")" ||
+    scribe_error_exit "Unable to ask git whether termux-packages has '$1'"
+  [[ -n "$files" ]]
+}
 
 # Copies our own packages (packages/<name>/) into termux-packages/packages/.
 # Runs on every build, unlike the patches, so the copies always match
@@ -210,10 +244,15 @@ sync_own_packages() {
   mapfile -t repo_dirs < <(jq --raw-output 'del(.pkg_format) | keys | .[]' "$TERMUX_PACKAGES_DIR/repo.json")
   [[ ${#repo_dirs[@]} -gt 0 ]] || scribe_error_exit "Unable to read package directories from termux-packages/repo.json"
 
+  check_termux_packages_checkout
+
   # Drop copies of packages that are no longer ours, so they are not built.
   for dest in "$TERMUX_PACKAGES_DIR"/packages/*/; do
     pkg_name="$(basename "$dest")"
     if [[ -e "$dest/$COTG_OWN_PACKAGE_MARKER" && ! -d "$script_dir/packages/$pkg_name" ]]; then
+      if termux_packages_tracks "packages/$pkg_name"; then
+        scribe_error_exit "termux-packages/packages/$pkg_name is upstream's but has our $COTG_OWN_PACKAGE_MARKER from an older build; reset termux-packages with 'git -C termux-packages reset --hard && git -C termux-packages clean -fdx' and run again"
+      fi
       rm -rf "$dest"
       scribe_ok "Removed package '$pkg_name', which is no longer in packages/"
     fi
@@ -225,9 +264,13 @@ sync_own_packages() {
     dest="$TERMUX_PACKAGES_DIR/packages/$pkg_name"
 
     for repo_dir in "${repo_dirs[@]}"; do
-      if [[ -e "$TERMUX_PACKAGES_DIR/$repo_dir/$pkg_name" && ! -e "$TERMUX_PACKAGES_DIR/$repo_dir/$pkg_name/$COTG_OWN_PACKAGE_MARKER" ]] ||
+      if termux_packages_tracks "$repo_dir/$pkg_name" ||
         compgen -G "$TERMUX_PACKAGES_DIR/$repo_dir/*/$pkg_name.subpackage.sh" >/dev/null; then
         scribe_error_exit "termux-packages already has a package named '$pkg_name' in $repo_dir/; change it with a patch instead"
+      fi
+      # Not upstream's, so a folder of that name is our copy or someone's own work.
+      if [[ -e "$TERMUX_PACKAGES_DIR/$repo_dir/$pkg_name" && ! -e "$TERMUX_PACKAGES_DIR/$repo_dir/$pkg_name/$COTG_OWN_PACKAGE_MARKER" ]]; then
+        scribe_error_exit "termux-packages/$repo_dir/$pkg_name is not upstream's and not our copy; move it out of termux-packages"
       fi
     done
 

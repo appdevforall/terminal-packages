@@ -3,8 +3,11 @@ TERMUX_PKG_DESCRIPTION="SQLite extension adding the encodeBrotli and decodeBrotl
 TERMUX_PKG_LICENSE="GPL-3.0"
 TERMUX_PKG_MAINTAINER="@appdevforall"
 TERMUX_PKG_VERSION=1.0.0
-TERMUX_PKG_REVISION=1
-TERMUX_PKG_DEPENDS="brotli"
+TERMUX_PKG_REVISION=2
+# 1.1.0 added the dictionary functions the extension calls:
+# BrotliEncoderPrepareDictionary, BrotliEncoderAttachPreparedDictionary,
+# BrotliEncoderDestroyPreparedDictionary and BrotliDecoderAttachDictionary.
+TERMUX_PKG_DEPENDS="brotli (>= 1.1.0)"
 TERMUX_PKG_BUILD_DEPENDS="libsqlite"
 TERMUX_PKG_RECOMMENDS="sqlite"
 TERMUX_PKG_SKIP_SRC_EXTRACT=true
