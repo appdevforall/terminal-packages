@@ -2,3 +2,4 @@
 /output/
 /patches/termux-keyring.patch
 /patches/termux-tools-update-package-name.patch
+.claude/worktrees
