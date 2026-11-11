@@ -609,7 +609,7 @@ if [[ $most =~ ^[0-9]+$ ]] && ((most > 128 * 1024)); then
 		"Maximum call stack size exceeded" "SELECT js_set_max_stack_size($near);" "$RECURSE"
 	expect_error "AC13: endless recursion through db.exec fails just below the largest size" "stopped" \
 		"SELECT js_set_max_stack_size($near);" \
-		"SELECT js_create_scalar('recurse_sql', '(function (args) { const rs = db.exec(\"SELECT recurse_sql(?)\", args[0] + 1); if (!rs.next()) throw new Error(\"stopped\"); return rs.get(0); })');" \
+		"SELECT js_create_scalar('recurse_sql', '(function (args) { try { const rs = db.exec(\"SELECT recurse_sql(?)\", args[0] + 1); if (rs.next()) return rs.get(0); } catch (e) {} throw new Error(\"stopped\"); })');" \
 		"SELECT recurse_sql(0);"
 else
 	not_ok "AC13: the error names the largest size" "got: $most"
@@ -623,6 +623,22 @@ if [[ $rc -ge 1 && $rc -lt 128 && $got =~ "Maximum call stack size exceeded" ]];
 else
 	not_ok "AC13: with 512 KB of stack, endless recursion fails at the default size" "exit status $rc" "got: $got"
 fi
+
+# --- AC14: SQL errors in db.exec are exceptions ---------------------------------
+
+# The statement runs as next() or toArray() steps it; an error while it runs
+# must not look like the end of the rows.
+EXEC_SETUP="CREATE TABLE IF NOT EXISTS ac14(a UNIQUE); INSERT OR IGNORE INTO ac14 VALUES (1);"
+expect_error "AC14: a failed constraint throws from next()" "UNIQUE constraint failed" \
+	"$EXEC_SETUP" "SELECT js_eval('db.exec(\"INSERT INTO ac14 VALUES (1)\").next()');"
+expect_error "AC14: an overflow on the second row throws from toArray()" "integer overflow" \
+	"SELECT js_eval('db.exec(\"SELECT 1 UNION ALL SELECT abs(-9223372036854775808)\").toArray()');"
+expect "AC14: JavaScript can catch the error" "UNIQUE constraint failed: ac14.a" \
+	"$EXEC_SETUP" "SELECT js_eval('(function () { try { db.exec(\"INSERT INTO ac14 VALUES (1)\").next(); return \"no error\"; } catch (e) { return e.message; } })()');"
+expect "AC14: a statement runs only when stepped, and the end of the rows is false" $'0\nfalse false\n1,2' \
+	"$EXEC_SETUP" "SELECT js_eval('db.exec(\"INSERT INTO ac14 VALUES (3)\"); 0');" \
+	"SELECT js_eval('[db.exec(\"SELECT 1 WHERE 0\").next(), db.exec(\"INSERT INTO ac14 VALUES (2)\").next()].join(\" \")');" \
+	"SELECT group_concat(a) FROM (SELECT a FROM ac14 ORDER BY a);"
 
 echo "1..$n"
 if [[ $failed -ne 0 ]]; then

@@ -2,7 +2,7 @@
 
 A SQLite loadable extension for writing SQL functions in JavaScript: scalar
 functions, aggregates, window functions and collations (ADFA-7081). It is
-[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.3.7 with seven
+[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.3.7 with eight
 changes of ours, listed [below](#changes-in-this-build). The JavaScript engine,
 [quickjs-ng](https://github.com/quickjs-ng/quickjs) 0.12.1, is built in.
 
@@ -86,6 +86,11 @@ SELECT js_eval('(function () {
   return rows.get(0);
 })()');                                               -- 42
 ```
+
+`db.exec` returns a result set, and the statement runs as `next()` or
+`toArray()` steps it, so call `next()` once to run an `INSERT` or another
+statement that returns no rows. An SQL error, while the statement is prepared
+or while it runs, is a JavaScript exception.
 
 ## Functions
 
@@ -184,7 +189,7 @@ constraints and generated columns cannot call `js_eval` or the other
 
 ## Changes in this build
 
-Seven patches on upstream 1.3.7, each sent upstream; `build.sh` applies them.
+Eight patches on upstream 1.3.7, each sent upstream; `build.sh` applies them.
 
 | Patch | Change |
 |-------|--------|
@@ -195,6 +200,7 @@ Seven patches on upstream 1.3.7, each sent upstream; `build.sh` applies them.
 | `0005` | A whole-number result is an INTEGER. Upstream, an INTEGER outside the 32-bit range comes back as a REAL. |
 | `0006` | An exception in an aggregate's or window function's step is an SQL error. Upstream, it is ignored, and the result is silently wrong. |
 | `0007` | The JavaScript stack size stays within the thread's stack: `js_set_max_stack_size` refuses text and larger sizes, and the default shrinks on a small stack. Upstream, those make endless recursion crash `sqlite3`. |
+| `0008` | An SQL error while a `db.exec` statement runs is an exception from `next()` or `toArray()`. Upstream, `next()` returns `false` as at the end of the rows, and `toArray()` returns the rows before the error, so a failed write looks like success. |
 
 The build also exports only the extension's entry points, and adds the one
 SQLite derives from the file name, so that `.load sqlite-js` needs no entry

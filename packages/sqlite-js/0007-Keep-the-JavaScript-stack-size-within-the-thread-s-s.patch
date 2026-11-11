@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: David Schachter <davidschachter@appdevforall.org>
 Date: Wed, 11 Nov 2026 11:47:56 -0800
-Subject: [PATCH] Keep the JavaScript stack size within the thread's stack
+Subject: [PATCH 7/8] Keep the JavaScript stack size within the thread's stack
 
 QuickJS stops code that calls itself too deeply when the stack falls
 below a limit it computes from the size it was given. It trusts that
@@ -188,7 +188,7 @@ index 790dc82..e5562f4 100644
  
  void js_set_memory_limit (sqlite3_context *context, int argc, sqlite3_value **argv) {
 diff --git a/test/main.c b/test/main.c
-index 0af4d22..7ccdcb5 100644
+index 0af4d22..ff1c0e7 100644
 --- a/test/main.c
 +++ b/test/main.c
 @@ -10,6 +10,7 @@
@@ -238,7 +238,7 @@ index 0af4d22..7ccdcb5 100644
 +    if (rc != SQLITE_OK) goto abort_test;
 +    rc = check_error(db, recurse, "Maximum call stack size exceeded");
 +    if (rc != SQLITE_OK) goto abort_test;
-+    rc = db_exec(db, "SELECT js_create_scalar('recurse_sql', '(function (args) { const rs = db.exec(\"SELECT recurse_sql(?)\", args[0] + 1); if (!rs.next()) throw new Error(\"stopped\"); return rs.get(0); })');");
++    rc = db_exec(db, "SELECT js_create_scalar('recurse_sql', '(function (args) { try { const rs = db.exec(\"SELECT recurse_sql(?)\", args[0] + 1); if (rs.next()) return rs.get(0); } catch (e) {} throw new Error(\"stopped\"); })');");
 +    if (rc != SQLITE_OK) goto abort_test;
 +    rc = check_error(db, "SELECT recurse_sql(0);", "stopped");
 +    if (rc != SQLITE_OK) goto abort_test;
