@@ -185,6 +185,56 @@ setup_termux_packages() {
   popd || scribe_error_exit "Unable to popd from termux-packages"
 }
 
+# Marks our copies in termux-packages, to tell them apart from upstream packages.
+COTG_OWN_PACKAGE_MARKER=".cotg-own-package"
+
+# Copies our own packages (packages/<name>/) into termux-packages/packages/.
+# Runs on every build, unlike the patches, so edits to them are always built.
+# They must be new packages: a change to an upstream package is a patch in
+# PATCHES.
+sync_own_packages() {
+  local pkg_dir pkg_name dest repo_dir
+  local -a repo_dirs
+
+  # The package directories build-package.sh searches.
+  mapfile -t repo_dirs < <(jq --raw-output 'del(.pkg_format) | keys | .[]' "$TERMUX_PACKAGES_DIR/repo.json")
+  [[ ${#repo_dirs[@]} -gt 0 ]] || scribe_error_exit "Unable to read package directories from termux-packages/repo.json"
+
+  # Drop copies of packages that are no longer ours, so they are not built.
+  for dest in "$TERMUX_PACKAGES_DIR"/packages/*/; do
+    pkg_name="$(basename "$dest")"
+    if [[ -e "$dest/$COTG_OWN_PACKAGE_MARKER" && ! -d "$script_dir/packages/$pkg_name" ]]; then
+      rm -rf "$dest"
+      scribe_ok "Removed package '$pkg_name', which is no longer in packages/"
+    fi
+  done
+
+  for pkg_dir in "$script_dir"/packages/*/; do
+    [[ -d "$pkg_dir" ]] || continue
+    pkg_name="$(basename "$pkg_dir")"
+    dest="$TERMUX_PACKAGES_DIR/packages/$pkg_name"
+
+    for repo_dir in "${repo_dirs[@]}"; do
+      if [[ -e "$TERMUX_PACKAGES_DIR/$repo_dir/$pkg_name" && ! -e "$TERMUX_PACKAGES_DIR/$repo_dir/$pkg_name/$COTG_OWN_PACKAGE_MARKER" ]] ||
+        compgen -G "$TERMUX_PACKAGES_DIR/$repo_dir/*/$pkg_name.subpackage.sh" >/dev/null; then
+        scribe_error_exit "termux-packages already has a package named '$pkg_name' in $repo_dir/; change it with a patch instead"
+      fi
+    done
+
+    rm -rf "$dest"
+    cp -r "$pkg_dir" "$dest" || scribe_error_exit "Unable to copy package '$pkg_name'"
+    touch "$dest/$COTG_OWN_PACKAGE_MARKER"
+
+    # The same package name update setup_termux_packages makes upstream.
+    # grep exits 1 when nothing matches, which pipefail would treat as failure.
+    { grep -rlF "${TERMUX_PACKAGE_NAME}" "$dest" || true; } |
+      xargs -r -L1 sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${COTG_PACKAGE_NAME}/g" ||
+      scribe_error_exit "Unable to update package name in '$pkg_name'"
+
+    scribe_ok "Copied package '$pkg_name'"
+  done
+}
+
 if [[ $# -eq 0 ]]; then
   # No arguments provided
   usage
@@ -240,10 +290,13 @@ scribe_check_command "git"
 scribe_check_command "patch"
 scribe_check_command "tee"
 scribe_check_command "time"
+scribe_check_command "jq"
 
 if ! [[ -f "$TERMUX_PACKAGES_DIR/.scribe-patched" ]]; then
   setup_termux_packages
 fi
+
+sync_own_packages
 
 # Symlink termux-packages/output to OUTPUT_DIR
 if ! [[ -L "$TERMUX_PACKAGES_DIR/output" ]]; then
