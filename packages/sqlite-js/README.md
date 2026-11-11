@@ -2,7 +2,7 @@
 
 A SQLite loadable extension for writing SQL functions in JavaScript: scalar
 functions, aggregates, window functions and collations (ADFA-7081). It is
-[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.3.7 with six
+[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.3.7 with seven
 changes of ours, listed [below](#changes-in-this-build). The JavaScript engine,
 [quickjs-ng](https://github.com/quickjs-ng/quickjs) 0.12.1, is built in.
 
@@ -100,7 +100,7 @@ SELECT js_eval('(function () {
 | `js_init_table(1)` | Also creates every function stored in `js_functions`. |
 | `js_load_text(path)`, `js_load_blob(path)` | Return a file's contents as TEXT or as a BLOB. |
 | `js_set_memory_limit(bytes)` | Sets the memory JavaScript may use on this connection; 0 means no limit. |
-| `js_set_max_stack_size(bytes)` | Sets JavaScript's stack limit. Leave it above 0: 0 turns the check off, and deep recursion then crashes `sqlite3`. |
+| `js_set_max_stack_size(bytes)` | Sets JavaScript's stack limit, at most what the thread's stack allows (the error gives the largest size). 0 turns the check off, for use from several threads; deep recursion then crashes `sqlite3`. |
 | `js_version()`, `js_version(1)` | The sqlite-js version, or with an argument, the quickjs-ng version. |
 
 The functions you create last for the session. To keep them, call
@@ -162,7 +162,9 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
 - **Endless code.** Ctrl-C stops running JavaScript: the statement fails with
   an "interrupted" error, even if the code catches exceptions, and `sqlite3`
   keeps running.
-- **Stack.** 1 MB by default; `js_set_max_stack_size` changes it.
+- **Stack.** 1 MB by default, or less on a thread with less stack;
+  `js_set_max_stack_size` changes it. Code that calls itself too deeply fails
+  with "Maximum call stack size exceeded".
 - **Collations that fail.** A collation that throws an exception, or runs out
   of memory, compares the two strings as equal. `ORDER BY` then returns a
   wrong order rather than an error, so keep collation code simple.
@@ -182,7 +184,7 @@ constraints and generated columns cannot call `js_eval` or the other
 
 ## Changes in this build
 
-Six patches on upstream 1.3.7, each sent upstream; `build.sh` applies them.
+Seven patches on upstream 1.3.7, each sent upstream; `build.sh` applies them.
 
 | Patch | Change |
 |-------|--------|
@@ -192,6 +194,7 @@ Six patches on upstream 1.3.7, each sent upstream; `build.sh` applies them.
 | `0004` | A result that is an `ArrayBuffer` or typed array is a BLOB. Upstream, it is NULL, so a BLOB cannot pass through a function. |
 | `0005` | A whole-number result is an INTEGER. Upstream, an INTEGER outside the 32-bit range comes back as a REAL. |
 | `0006` | An exception in an aggregate's or window function's step is an SQL error. Upstream, it is ignored, and the result is silently wrong. |
+| `0007` | The JavaScript stack size stays within the thread's stack: `js_set_max_stack_size` refuses text and larger sizes, and the default shrinks on a small stack. Upstream, those make endless recursion crash `sqlite3`. |
 
 The build also exports only the extension's entry points, and adds the one
 SQLite derives from the file name, so that `.load sqlite-js` needs no entry

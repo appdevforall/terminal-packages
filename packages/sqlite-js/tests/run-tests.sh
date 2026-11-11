@@ -584,6 +584,46 @@ else
 		"cannot load $BROTLI_EXT; install the sqlite-brotli package, or set BROTLI_EXT"
 fi
 
+# --- AC13: the stack size stays within the thread's stack ---------------------
+
+# QuickJS trusts its stack size: a size larger than the thread's stack, or 0,
+# never trips its check, and code that calls itself without end crashes.
+RECURSE="SELECT js_eval('(function f(n) { return f(n + 1); })(0)');"
+expect_error "AC13: endless recursion fails at the default size" \
+	"Maximum call stack size exceeded" "$RECURSE"
+for size in "'abc'" -1 1.5 "'1048576'" 1073741824; do
+	expect_error "AC13: js_set_max_stack_size($size) is an error" \
+		"The stack size must be an integer number of bytes from 1 to [0-9]+" \
+		"SELECT js_set_max_stack_size($size);"
+done
+expect "AC13: js_set_max_stack_size(0) turns the check off, for use from several threads" "NULL" \
+	"SELECT quote(js_set_max_stack_size(0));"
+
+# Close to the largest size allowed (each process has its own, since the stack
+# starts at a slightly different place), recursion still fails cleanly, also
+# through db.exec, which puts SQLite's frames between QuickJS's checks.
+most=$(sql "SELECT js_set_max_stack_size(1073741824);" 2>&1 | sed -n 's/.*from 1 to \([0-9]*\).*/\1/p')
+if [[ $most =~ ^[0-9]+$ ]] && ((most > 128 * 1024)); then
+	near=$((most - 64 * 1024))
+	expect_error "AC13: endless recursion fails just below the largest size" \
+		"Maximum call stack size exceeded" "SELECT js_set_max_stack_size($near);" "$RECURSE"
+	expect_error "AC13: endless recursion through db.exec fails just below the largest size" "stopped" \
+		"SELECT js_set_max_stack_size($near);" \
+		"SELECT js_create_scalar('recurse_sql', '(function (args) { const rs = db.exec(\"SELECT recurse_sql(?)\", args[0] + 1); if (!rs.next()) throw new Error(\"stopped\"); return rs.get(0); })');" \
+		"SELECT recurse_sql(0);"
+else
+	not_ok "AC13: the error names the largest size" "got: $most"
+fi
+
+# On a thread with less stack than the 1 MB default, the default shrinks.
+got=$(ulimit -s 512 && sql "$RECURSE" 2>&1)
+rc=$?
+if [[ $rc -ge 1 && $rc -lt 128 && $got =~ "Maximum call stack size exceeded" ]]; then
+	ok "AC13: with 512 KB of stack, endless recursion fails at the default size"
+else
+	not_ok "AC13: with 512 KB of stack, endless recursion fails at the default size" "exit status $rc" "got: $got"
+fi
+
 echo "1..$n"
 if [[ $failed -ne 0 ]]; then
 	echo "# FAILED $failed of $n"
