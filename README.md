@@ -21,6 +21,14 @@ git clone --recurse-submodules https://github.com/appdevforall/terminal-packages
 
 `build.sh` will patch `termux-packages` if needed, set up the output directories and then start building the packages. See [termux-packages wiki](https://github.com/termux/termux-packages/wiki) for more information about the build system, patches, build scripts, etc.
 
+#### Our own packages
+
+Packages that are not in `termux-packages` live in `packages/<name>/`, laid out like a `termux-packages` package (`build.sh` and any sources it builds). On every run, after patching, `build.sh` copies each of them into `termux-packages/packages/`, so they build like any other package and the copies always match `packages/`. To ship a change to one, raise `TERMUX_PKG_VERSION` or `TERMUX_PKG_REVISION` in its `build.sh`: `build-package.sh` skips a package it already built at the same version in the same container, and publishing keeps a published file of the same version. A change to an upstream package belongs in a patch instead: `build.sh` stops if one of our packages has the name of an upstream package or subpackage. It asks git which package folders are upstream, so `termux-packages` must be a git checkout (`git clone --recurse-submodules`).
+
+| Package | What it is |
+|---------|------------|
+| `sqlite-brotli` | SQLite extension adding `encodeBrotli()` and `decodeBrotli()`. See [its README](packages/sqlite-brotli/README.md). |
+
 The key specified with the `-s` option is the **public key** (**NOT** the private key!), which can be generated using :
 
 ```
@@ -91,7 +99,7 @@ The **Build packages** workflow (`.github/workflows/build-packages.yml`) builds 
 gh workflow run build-packages.yml -f packages="jq tree" -f arch=both
 ```
 
-- `packages` - space-separated names from `termux-packages/packages/`.
+- `packages` - space-separated names from `termux-packages/packages/` or our own `packages/`.
 - `arch` - `aarch64`, `arm`, or `both` (one job per architecture, in parallel).
 - `skip_dependencies` - build only the named packages (`build-package.sh -s`). Most packages need at least `libandroid-support`, so leave it off unless the package is known to build without its dependencies.
 
