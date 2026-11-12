@@ -234,7 +234,7 @@ expect "loading the extension twice in one session is harmless" "2" \
 
 # --- AC2: the engine is quickjs-ng --------------------------------------------
 
-expect "AC2: js_version() is the sqlite-js version, 1.3.7" "1.3.7" "SELECT js_version();"
+expect "AC2: js_version() is the sqlite-js version, 1.4.1" "1.4.1" "SELECT js_version();"
 got=$(sql "SELECT js_version(1);" 2>&1)
 # Bellard's QuickJS has no version function, so sqlite-js does not build with it.
 if [[ $got =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -555,6 +555,29 @@ expect "AC9: a limit lowered under garbage leaves the session usable" $'\n200000
 	"SELECT js_eval('delete globalThis.g; 0');" \
 	"SELECT js_set_memory_limit(4 * 1024 * 1024);" \
 	"SELECT js_eval('1 + 1');"
+# A limit lowered above the memory in use collects too: the garbage would fill
+# the room under the new limit.
+expect "AC9: a limit lowered above garbage leaves room for what fits" $'\n200000\n0\n\n16777216' \
+	"SELECT js_set_memory_limit(0);" \
+	"SELECT js_eval('globalThis.g = []; for (let i = 0; i < 200000; i++) { const o = {}; o.o = o; g.push(o); } g.length');" \
+	"SELECT js_eval('delete globalThis.g; 0');" \
+	"SELECT js_set_memory_limit(32 * 1024 * 1024);" \
+	"SELECT js_eval('new ArrayBuffer(16 * 1024 * 1024).byteLength');"
+# QuickJS refuses an allocation too large to fit before it makes it, so the
+# memory in use stays far from the limit. The garbage is collected after the
+# "out of memory" error, and the next try succeeds.
+name="AC9: garbage that leaves no room for a large allocation is collected after it fails"
+got=$(sql_nobail \
+	"SELECT js_eval('globalThis.g = []; for (let i = 0; i < 40; i++) { const o = { b: new ArrayBuffer(1024 * 1024) }; o.o = o; g.push(o); } g.length');" \
+	"SELECT js_eval('delete globalThis.g; 0');" \
+	"SELECT js_eval('new ArrayBuffer(30 * 1024 * 1024).byteLength');" \
+	"SELECT js_eval('new ArrayBuffer(30 * 1024 * 1024).byteLength');" 2>&1)
+rc=$?
+if [[ $rc -lt 128 && ${got##*$'\n'} == 31457280 ]]; then
+	ok "$name"
+else
+	not_ok "$name" "exit status $rc" "want the last line: 31457280" "got: $got"
+fi
 for bad in -1 1.5 "'64'" NULL; do
 	expect_error "AC9: js_set_memory_limit($bad) is an SQL error" "The memory limit must be an integer number of bytes" \
 		"SELECT js_set_memory_limit($bad);"

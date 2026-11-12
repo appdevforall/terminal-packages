@@ -2,8 +2,8 @@
 
 A SQLite loadable extension for writing SQL functions in JavaScript: scalar
 functions, aggregates, window functions and collations (ADFA-7081). It is
-[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) as of 12 November
-2026, which adds nine changes of ours to its 1.3.7 release, listed
+[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.4.1, the first
+release with nine changes of ours, plus two patches of ours, all listed
 [below](#changes-in-this-build). The JavaScript engine,
 [quickjs-ng](https://github.com/quickjs-ng/quickjs) 0.12.1, is built in.
 
@@ -106,7 +106,7 @@ or while it runs, is a JavaScript exception.
 | `js_init_table(1)` | Also creates every function stored in `js_functions`. |
 | `js_load_text(path)`, `js_load_blob(path)` | Return a file's contents as TEXT or as a BLOB. |
 | `js_set_memory_limit(bytes)` | Sets the memory JavaScript may use on this connection; 0 means no limit. |
-| `js_set_max_stack_size(bytes)` | Sets JavaScript's stack limit, at most what the thread's stack allows (the error gives the largest size). 0 turns the check off, for use from several threads; deep recursion then crashes `sqlite3`. |
+| `js_set_max_stack_size(bytes)` | Sets JavaScript's stack limit, at most what the thread's stack allows (the error gives the largest size). 0 turns the check off; deep recursion then crashes `sqlite3`. |
 | `js_version()`, `js_version(1)` | The sqlite-js version, or with an argument, the quickjs-ng version. |
 
 The functions you create last for the session. To keep them, call
@@ -166,12 +166,11 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
 - **Memory.** JavaScript may use 64 MB per session. Code that needs more fails
   with an "out of memory" error, and the session stays usable. JavaScript that
   catches the error receives `null` instead when the limit leaves no room even
-  for the error.
-  `js_set_memory_limit` changes the limit; memory that globals still hold
-  counts against it until they are cleared. A lower limit leaves the session
-  usable, since garbage is collected as the limit changes, but a limit under
-  the memory that globals hold leaves no room for any JavaScript until it is
-  raised again.
+  for the error. Garbage is collected after the error, so code that failed
+  because garbage filled the limit works when run again.
+  `js_set_memory_limit` changes the limit, and collects garbage. Memory that
+  globals still hold counts against the limit until they are cleared, so a
+  limit under it leaves no room for any JavaScript until it is raised again.
 - **Endless code.** Ctrl-C stops running JavaScript: the statement fails with
   an "interrupted" error, even if the code catches exceptions, and `sqlite3`
   keeps running.
@@ -197,8 +196,7 @@ constraints and generated columns cannot call `js_eval` or the other
 
 ## Changes in this build
 
-Upstream merged nine changes of ours after its 1.3.7 release, so this build is
-its main branch at commit c8ae85a, with no patches. Compared with 1.3.7:
+Upstream released nine changes of ours in 1.4.0. Compared with 1.3.7:
 
 | Upstream PR | Change |
 |-------------|--------|
@@ -211,6 +209,13 @@ its main branch at commit c8ae85a, with no patches. Compared with 1.3.7:
 | #17 | The JavaScript stack size stays within the thread's stack: `js_set_max_stack_size` refuses text and larger sizes, and the default shrinks on a small stack. In 1.3.7, those make endless recursion crash `sqlite3`. |
 | #18 | An SQL error while a `db.exec` statement runs is an exception from `next()` or `toArray()`. In 1.3.7, `next()` returns `false` as at the end of the rows, and `toArray()` returns the rows before the error, so a failed write looks like success. |
 | #19 | The stack check follows the thread each call runs on. In 1.3.7, JavaScript run on a thread other than the one that set up the connection fails at once, or crashes on endless recursion. |
+
+This build adds two patches of ours, offered upstream:
+
+| Patch | Upstream PR | Change |
+|-------|-------------|--------|
+| 0001 | #22 | The stack check stays within the stack in two more cases. In 1.4.1, endless recursion crashes on a thread with less than 64 KB of stack left, or on a main thread whose stack was first measured deep down. Neither happens in `sqlite3`, which runs JavaScript on its main thread and loads the extension near the top of its stack. |
+| 0002 | #23 | Garbage is collected after any "out of memory" error and whenever the limit is set. In 1.4.1, garbage can make code that fits in the limit fail with "out of memory" every time: an allocation too large to fit, or one made after the limit was lowered to above the memory in use. |
 
 The build also exports only the extension's entry points, and adds the one
 SQLite derives from the file name, so that `.load sqlite-js` needs no entry
