@@ -114,7 +114,9 @@ session. A function cannot be redefined in the session that created it; use a
 new session.
 
 All but `js_version` work only in top-level SQL, not in views, triggers, CHECK
-constraints, generated columns or indexes. The functions you create have no
+constraints, generated columns or indexes stored in a database. (TEMP views and
+triggers can call them: SQLite trusts them, since only the session can make
+them.) The functions you create have no
 such restriction of their own, but `sqlite3` turns `trusted_schema` off, which
 keeps them out of a database's views and triggers as well (TEMP ones excepted); run
 `PRAGMA trusted_schema = ON;` in a session to use them there. The collations
@@ -161,7 +163,9 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
 ## Limits
 
 - **Memory.** JavaScript may use 64 MB per session. Code that needs more fails
-  with an "out of memory" error, and the session stays usable.
+  with an "out of memory" error, and the session stays usable. JavaScript that
+  catches the error receives `null` instead when the limit leaves no room even
+  for the error.
   `js_set_memory_limit` changes the limit; memory that globals still hold
   counts against it until they are cleared.
 - **Endless code.** Ctrl-C stops running JavaScript: the statement fails with
@@ -195,8 +199,8 @@ Eight patches on upstream 1.3.7, each sent upstream; `build.sh` applies them.
 |-------|--------|
 | `0001` | Ctrl-C and `sqlite3_interrupt()` stop running JavaScript. Upstream, endless code hangs `sqlite3`. |
 | `0002` | A 64 MB memory limit, and `js_set_memory_limit`. Upstream, code that keeps allocating takes all the memory there is. |
-| `0003` | `js_eval` and the other functions that run code, read files or change the runtime work only in top-level SQL. Upstream, with `trusted_schema` on, a view can call them. |
-| `0004` | A result that is an `ArrayBuffer` or typed array is a BLOB. Upstream, it is NULL, so a BLOB cannot pass through a function. |
+| `0003` | `js_eval` and the other functions that run code, read files or change the runtime work only in top-level SQL (and TEMP views and triggers). Upstream, with `trusted_schema` on, a view can call them. |
+| `0004` | A result that is an `ArrayBuffer` or typed array is a BLOB, and `db.exec` binds one as a BLOB or throws if it cannot read it. Upstream, a result is NULL, so a BLOB cannot pass through a function. |
 | `0005` | A whole-number result is an INTEGER. Upstream, an INTEGER outside the 32-bit range comes back as a REAL. |
 | `0006` | An exception in an aggregate's or window function's step is an SQL error. Upstream, it is ignored, and the result is silently wrong. |
 | `0007` | The JavaScript stack size stays within the thread's stack: `js_set_max_stack_size` refuses text and larger sizes, and the default shrinks on a small stack. Upstream, those make endless recursion crash `sqlite3`. |

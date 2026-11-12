@@ -410,6 +410,12 @@ printf 'line one\nline two ✓\n' >loadme.txt
 expect "js_load_text and js_load_blob read a file" "line one|X'6C696E65206F6E650A6C696E652074776F20E29C930A'" \
 	"SELECT substr(js_load_text($(sql_str "$WORK/loadme.txt")), 1, 8), quote(js_load_blob($(sql_str "$WORK/loadme.txt")));"
 
+expect "AC6: db.exec throws for a buffer it cannot read, instead of binding NULL" \
+	"ArrayBuffer is detached or resized|thrown" \
+	"SELECT js_eval('(function () { const ab = new ArrayBuffer(16, { maxByteLength: 16 }); const u = new Uint8Array(ab, 0, 8); ab.resize(4); try { db.exec(\"SELECT ?\", u); return \"bound\"; } catch (e) { return e.message; } })()'), js_eval('(function () { const b = new ArrayBuffer(4); b.transfer(); try { db.exec(\"SELECT ?\", b); return \"bound\"; } catch (e) { return \"thrown\"; } })()');"
+expect "AC6: a typed array's own offset and length count, not properties defined over them" "X'02'" \
+	"SELECT quote(js_eval('(function () { const u = new Uint8Array([1, 2, 3]).subarray(1, 2); Object.defineProperty(u, \"byteOffset\", { value: 0 }); Object.defineProperty(u, \"byteLength\", { value: 3 }); return u; })()'));"
+
 # --- AC7: the crash cases fixed in 1.3.6 are SQL errors ----------------------
 
 DB=$WORK/ac7.db
@@ -494,6 +500,22 @@ expect_nobail "AC9: memory held by a global counts until the global is cleared" 
 	"SELECT js_eval('new ArrayBuffer(16 * 1024 * 1024).byteLength');" \
 	"SELECT js_eval('keep = null; new ArrayBuffer(16 * 1024 * 1024).byteLength');"
 
+# QuickJS collects cyclic garbage only past a threshold it sets to 1.5 times the
+# memory in use, which with more than two thirds of the limit held is past the
+# limit: garbage would fill the rest.
+expect "AC9: garbage is still collected with 48 of 64 MB held" "50331648" \
+	"SELECT js_eval('globalThis.keep = new ArrayBuffer(48 * 1024 * 1024); for (let i = 0; i < 300000; i++) { const o = {}; o.o = o; } keep.byteLength');"
+expect "AC9: an aggregate over 300 groups runs with 48 of 64 MB held" $'0\n0\n300' \
+	"SELECT js_eval('globalThis.keep = new ArrayBuffer(48 * 1024 * 1024); 0');" \
+	"SELECT js_create_aggregate('n_rows', 'n = 0;', '(function (args) { n++; })', '(function () { return n; })');" \
+	"WITH RECURSIVE g(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM g WHERE x < 300) SELECT sum(c) FROM (SELECT n_rows(x) AS c FROM g GROUP BY x);"
+# Small allocations fill the limit so far that not even the error object fits.
+# The loop stops at about 4 times the limit, like the ones above.
+expect_nobail "AC9: running out of memory through small allocations is an \"out of memory\" error" \
+	"2" "out of memory" \
+	"SELECT js_eval('(function () { let h = null; for (let i = 0; i < 4000000; i++) h = { n: h }; })()');" \
+	"SELECT js_eval('1 + 1');"
+
 # QuickJS can crash if it runs out of memory while it creates a context, which
 # every aggregate needs. Aggregates under small limits, and with little memory
 # left under the default one, may fail, but must not crash.
@@ -555,6 +577,10 @@ expect "AC10: so the trigger never ran" "0" "SELECT count(*) FROM log;"
 # SQLITE_DIRECTONLY is 0x80000 in function_list's flags.
 expect "AC10: every js_* function but js_version is SQLITE_DIRECTONLY" "13|0" \
 	"SELECT count(*), sum(((flags & 0x80000) != 0) != (name <> 'js_version')) FROM pragma_function_list WHERE name LIKE 'js\_%' ESCAPE '\\';"
+# SQLite trusts the TEMP schema, which only the session itself can fill, so a
+# TEMP view can call js_eval, as the README says.
+expect "AC10: a TEMP view can call js_eval" "42" \
+	"CREATE TEMP VIEW v_temp AS SELECT js_eval('6 * 7') AS x;" "SELECT x FROM v_temp;"
 # The view is in the database file: SQLite trusts the TEMP schema, which only
 # the session itself can fill.
 DB=$WORK/views.db

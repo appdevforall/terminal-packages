@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: David Schachter <davidschachter@appdevforall.org>
 Date: Tue, 10 Nov 2026 20:56:10 -0800
-Subject: [PATCH 1/6] Stop JavaScript when the connection is interrupted
+Subject: [PATCH 1/8] Stop JavaScript when the connection is interrupted
 
 JavaScript runs inside the SQL statement that calls it, but QuickJS had
 no interrupt handler, so sqlite3_interrupt() could not stop code that
