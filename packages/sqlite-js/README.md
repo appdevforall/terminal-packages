@@ -2,8 +2,9 @@
 
 A SQLite loadable extension for writing SQL functions in JavaScript: scalar
 functions, aggregates, window functions and collations (ADFA-7081). It is
-[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.3.7 with eight
-changes of ours, listed [below](#changes-in-this-build). The JavaScript engine,
+[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) as of 12 November
+2026, which adds nine changes of ours to its 1.3.7 release, listed
+[below](#changes-in-this-build). The JavaScript engine,
 [quickjs-ng](https://github.com/quickjs-ng/quickjs) 0.12.1, is built in.
 
 ## Load it
@@ -167,7 +168,10 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
   catches the error receives `null` instead when the limit leaves no room even
   for the error.
   `js_set_memory_limit` changes the limit; memory that globals still hold
-  counts against it until they are cleared.
+  counts against it until they are cleared. A lower limit leaves the session
+  usable, since garbage is collected as the limit changes, but a limit under
+  the memory that globals hold leaves no room for any JavaScript until it is
+  raised again.
 - **Endless code.** Ctrl-C stops running JavaScript: the statement fails with
   an "interrupted" error, even if the code catches exceptions, and `sqlite3`
   keeps running.
@@ -193,18 +197,20 @@ constraints and generated columns cannot call `js_eval` or the other
 
 ## Changes in this build
 
-Eight patches on upstream 1.3.7, each sent upstream; `build.sh` applies them.
+Upstream merged nine changes of ours after its 1.3.7 release, so this build is
+its main branch at commit c8ae85a, with no patches. Compared with 1.3.7:
 
-| Patch | Change |
-|-------|--------|
-| `0001` | Ctrl-C and `sqlite3_interrupt()` stop running JavaScript. Upstream, endless code hangs `sqlite3`. |
-| `0002` | A 64 MB memory limit, and `js_set_memory_limit`. Upstream, code that keeps allocating takes all the memory there is. |
-| `0003` | `js_eval` and the other functions that run code, read files or change the runtime work only in top-level SQL (and TEMP views and triggers). Upstream, with `trusted_schema` on, a view can call them. |
-| `0004` | A result that is an `ArrayBuffer` or typed array is a BLOB, and `db.exec` binds one as a BLOB or throws if it cannot read it. Upstream, a result is NULL, so a BLOB cannot pass through a function. |
-| `0005` | A whole-number result is an INTEGER. Upstream, an INTEGER outside the 32-bit range comes back as a REAL. |
-| `0006` | An exception in an aggregate's or window function's step is an SQL error. Upstream, it is ignored, and the result is silently wrong. |
-| `0007` | The JavaScript stack size stays within the thread's stack: `js_set_max_stack_size` refuses text and larger sizes, and the default shrinks on a small stack. Upstream, those make endless recursion crash `sqlite3`. |
-| `0008` | An SQL error while a `db.exec` statement runs is an exception from `next()` or `toArray()`. Upstream, `next()` returns `false` as at the end of the rows, and `toArray()` returns the rows before the error, so a failed write looks like success. |
+| Upstream PR | Change |
+|-------------|--------|
+| #11 | Ctrl-C and `sqlite3_interrupt()` stop running JavaScript. In 1.3.7, endless code hangs `sqlite3`. |
+| #12 | A 64 MB memory limit, and `js_set_memory_limit`. In 1.3.7, code that keeps allocating takes all the memory there is. |
+| #13 | `js_eval` and the other functions that run code, read files or change the runtime work only in top-level SQL (and TEMP views and triggers). In 1.3.7, with `trusted_schema` on, a view can call them. |
+| #14 | A result that is an `ArrayBuffer` or typed array is a BLOB, and `db.exec` binds one as a BLOB or throws if it cannot read it. In 1.3.7, a result is NULL, so a BLOB cannot pass through a function. |
+| #15 | A whole-number result is an INTEGER. In 1.3.7, an INTEGER outside the 32-bit range comes back as a REAL. |
+| #16 | An exception in an aggregate's or window function's step is an SQL error. In 1.3.7, it is ignored, and the result is silently wrong. |
+| #17 | The JavaScript stack size stays within the thread's stack: `js_set_max_stack_size` refuses text and larger sizes, and the default shrinks on a small stack. In 1.3.7, those make endless recursion crash `sqlite3`. |
+| #18 | An SQL error while a `db.exec` statement runs is an exception from `next()` or `toArray()`. In 1.3.7, `next()` returns `false` as at the end of the rows, and `toArray()` returns the rows before the error, so a failed write looks like success. |
+| #19 | The stack check follows the thread each call runs on. In 1.3.7, JavaScript run on a thread other than the one that set up the connection fails at once, or crashes on endless recursion. |
 
 The build also exports only the extension's entry points, and adds the one
 SQLite derives from the file name, so that `.load sqlite-js` needs no entry

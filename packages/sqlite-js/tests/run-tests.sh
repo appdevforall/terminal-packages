@@ -546,6 +546,15 @@ expect "AC9: js_set_memory_limit raises the limit" $'\n134217728' \
 expect_error "AC9: js_set_memory_limit lowers the limit" "out of memory" \
 	"SELECT js_set_memory_limit(8 * 1024 * 1024);" \
 	"SELECT js_eval('new ArrayBuffer(16 * 1024 * 1024).byteLength');"
+# QuickJS refuses every allocation while the memory in use is over the limit,
+# and collects only when it allocates, so garbage over a lowered limit would
+# leave the session out of memory until the limit is raised again.
+expect "AC9: a limit lowered under garbage leaves the session usable" $'\n200000\n0\n\n2' \
+	"SELECT js_set_memory_limit(0);" \
+	"SELECT js_eval('globalThis.g = []; for (let i = 0; i < 200000; i++) { const o = {}; o.o = o; g.push(o); } g.length');" \
+	"SELECT js_eval('delete globalThis.g; 0');" \
+	"SELECT js_set_memory_limit(4 * 1024 * 1024);" \
+	"SELECT js_eval('1 + 1');"
 for bad in -1 1.5 "'64'" NULL; do
 	expect_error "AC9: js_set_memory_limit($bad) is an SQL error" "The memory limit must be an integer number of bytes" \
 		"SELECT js_set_memory_limit($bad);"

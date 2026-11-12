@@ -3,15 +3,17 @@ TERMUX_PKG_DESCRIPTION="SQLite extension for functions written in JavaScript"
 TERMUX_PKG_LICENSE="Apache-2.0, MIT"
 TERMUX_PKG_LICENSE_FILE="LICENSE, LICENSE.quickjs"
 TERMUX_PKG_MAINTAINER="@appdevforall"
-TERMUX_PKG_VERSION=1.3.7
-TERMUX_PKG_REVISION=5
-TERMUX_PKG_SRCURL=https://github.com/sqliteai/sqlite-js/archive/refs/tags/${TERMUX_PKG_VERSION}.tar.gz
-TERMUX_PKG_SHA256=a3251ba5b10beb4b1f9b001f6595581a85015dd792ee93aa1947db12b2f8f316
+# Upstream merged our changes (ADFA-7081, sqliteai/sqlite-js #11 to #19) after
+# 1.3.7, so this is a commit of its main branch, with no patches. Go back to a
+# release tag once one includes them.
+_COMMIT=c8ae85a29a911977212e6cdd36ed84926b6b8c4e
+_COMMIT_DATE=20261112
+TERMUX_PKG_VERSION=1.3.7-p${_COMMIT_DATE}
+TERMUX_PKG_SRCURL=https://github.com/sqliteai/sqlite-js/archive/${_COMMIT}.tar.gz
+TERMUX_PKG_SHA256=4f4ebb7e44b20762c11bdbfc6b3abd3aa423daec2b461d20fc47598716ce5561
 TERMUX_PKG_BUILD_DEPENDS="libsqlite"
 TERMUX_PKG_RECOMMENDS="sqlite"
 TERMUX_PKG_BUILD_IN_SRC=true
-# The *.patch files are ours (ADFA-7081) and sent upstream; check each one
-# against a new upstream version, and drop those upstream has merged.
 TERMUX_PKG_AUTO_UPDATE=false
 
 termux_step_post_get_source() {
