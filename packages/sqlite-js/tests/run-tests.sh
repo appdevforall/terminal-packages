@@ -453,14 +453,21 @@ expect_sigint_stops "AC8: SIGINT stops code that catches every exception" \
 # In batch mode the shell exits after an interrupt, whatever stopped; only an
 # interactive session goes on. script(1) runs one on a pseudo-terminal, where
 # the byte 0x03 is Ctrl-C.
-if command -v script >/dev/null 2>&1; then
+# expect_ctrl_c_keeps_session NAME SQL: Ctrl-C a second after SQL starts must
+# stop it, and the session must then run SQL.
+expect_ctrl_c_keeps_session() {
+	local name=$1 sql=$2 cmd got started seconds
+	if ! command -v script >/dev/null 2>&1; then
+		skip "$name" "needs script(1), from the util-linux package"
+		return
+	fi
 	cmd=$(printf '%q ' "$SQLITE3" -noheader -cmd "$LOAD_EXT" "$DB")
 	# The shell also reports "interrupted" once the loop ends by itself, so the
 	# session must end well before the loop's 20 s are up: about 5 s if Ctrl-C works.
 	started=$SECONDS
 	got=$({
 		sleep 1
-		printf '%s\n' "SELECT js_eval('$RUNAWAY');"
+		printf '%s\n' "$sql"
 		sleep 2
 		printf '\003'
 		sleep 1
@@ -470,15 +477,18 @@ if command -v script >/dev/null 2>&1; then
 	} | timeout -k 5 30 script -q -c "$cmd" /dev/null 2>&1 | tr -d '\r')
 	seconds=$((SECONDS - started))
 	if [[ $got == *interrupted* && $got == *"still alive"* && $seconds -lt 15 ]]; then
-		ok "AC8: in an interactive session, Ctrl-C stops a runaway loop and sqlite3 keeps running"
+		ok "$name"
 	else
-		not_ok "AC8: in an interactive session, Ctrl-C stops a runaway loop and sqlite3 keeps running" \
-			"took $seconds s, want under 15" "got: $got"
+		not_ok "$name" "took $seconds s, want under 15" "got: $got"
 	fi
-else
-	skip "AC8: in an interactive session, Ctrl-C stops a runaway loop and sqlite3 keeps running" \
-		"needs script(1), from the util-linux package"
-fi
+}
+expect_ctrl_c_keeps_session "AC8: in an interactive session, Ctrl-C stops a runaway loop and sqlite3 keeps running" \
+	"SELECT js_eval('$RUNAWAY');"
+# A db.exec result set the stopped code keeps open is a statement still running,
+# and SQLite keeps an interrupt in effect while one runs: every later statement
+# in the session failed with "interrupted" (patches 0003 and 0004).
+expect_ctrl_c_keeps_session "AC8: after Ctrl-C stops code that keeps a result set open, sqlite3 still runs SQL" \
+	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); $RUNAWAY');"
 
 # --- AC9: the memory limit ------------------------------------------------------
 

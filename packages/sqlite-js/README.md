@@ -3,7 +3,7 @@
 A SQLite loadable extension for writing SQL functions in JavaScript: scalar
 functions, aggregates, window functions and collations (ADFA-7081). It is
 [sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.4.1, the first
-release with nine changes of ours, plus two patches of ours, all listed
+release with nine changes of ours, plus four patches of ours, all listed
 [below](#changes-in-this-build). The JavaScript engine,
 [quickjs-ng](https://github.com/quickjs-ng/quickjs) 0.12.1, is built in.
 
@@ -173,7 +173,8 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
   limit under it leaves no room for any JavaScript until it is raised again.
 - **Endless code.** Ctrl-C stops running JavaScript: the statement fails with
   an "interrupted" error, even if the code catches exceptions, and `sqlite3`
-  keeps running.
+  keeps running. A `db.exec` result set that the stopped code kept, in a
+  global say, is ended: reading on from it fails with "interrupted".
 - **Stack.** 1 MB by default, or less on a thread with less stack;
   `js_set_max_stack_size` changes it. Code that calls itself too deeply fails
   with "Maximum call stack size exceeded".
@@ -210,12 +211,13 @@ Upstream released nine changes of ours in 1.4.0. Compared with 1.3.7:
 | #18 | An SQL error while a `db.exec` statement runs is an exception from `next()` or `toArray()`. In 1.3.7, `next()` returns `false` as at the end of the rows, and `toArray()` returns the rows before the error, so a failed write looks like success. |
 | #19 | The stack check follows the thread each call runs on. In 1.3.7, JavaScript run on a thread other than the one that set up the connection fails at once, or crashes on endless recursion. |
 
-This build adds two patches of ours, offered upstream:
+This build adds four patches of ours, offered upstream:
 
 | Patch | Upstream PR | Change |
 |-------|-------------|--------|
 | 0001 | #22 | The stack check stays within the stack in two more cases. In 1.4.1, endless recursion crashes on a thread with less than 64 KB of stack left, or on a main thread whose stack was first measured deep down. Neither happens in `sqlite3`, which runs JavaScript on its main thread and loads the extension near the top of its stack. |
 | 0002 | #23 | Garbage is collected after any "out of memory" error and whenever the limit is set. In 1.4.1, garbage can make code that fits in the limit fail with "out of memory" every time: an allocation too large to fit, or one made after the limit was lowered to above the memory in use. |
+| 0003, 0004 | #24 | After an interrupt, the `db.exec` result sets the stopped code left open are ended, and reading on from one fails with "interrupted". In 1.4.1, Ctrl-C during code that keeps one open, in a global say, leaves every later statement in the session failing with "interrupted". |
 
 The build also exports only the extension's entry points, and adds the one
 SQLite derives from the file name, so that `.load sqlite-js` needs no entry
