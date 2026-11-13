@@ -234,7 +234,7 @@ expect "loading the extension twice in one session is harmless" "2" \
 
 # --- AC2: the engine is quickjs-ng --------------------------------------------
 
-expect "AC2: js_version() is the sqlite-js version, 1.4.1" "1.4.1" "SELECT js_version();"
+expect "AC2: js_version() is the sqlite-js version, 1.4.2" "1.4.2" "SELECT js_version();"
 got=$(sql "SELECT js_version(1);" 2>&1)
 # Bellard's QuickJS has no version function, so sqlite-js does not build with it.
 if [[ $got =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -484,11 +484,16 @@ expect_ctrl_c_keeps_session() {
 }
 expect_ctrl_c_keeps_session "AC8: in an interactive session, Ctrl-C stops a runaway loop and sqlite3 keeps running" \
 	"SELECT js_eval('$RUNAWAY');"
-# A db.exec result set the stopped code keeps open is a statement still running,
-# and SQLite keeps an interrupt in effect while one runs: every later statement
-# in the session failed with "interrupted" (patches 0003 and 0004).
+# A db.exec result set left open is a statement still running, and SQLite keeps
+# an interrupt in effect while one runs. In 1.4.1 a result set kept in a global
+# stayed open, so after Ctrl-C, during the code or during plain SQL later, every
+# statement in the session failed with "interrupted". From 1.4.2 the result set
+# ends when the call that created it returns.
 expect_ctrl_c_keeps_session "AC8: after Ctrl-C stops code that keeps a result set open, sqlite3 still runs SQL" \
 	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); $RUNAWAY');"
+expect_ctrl_c_keeps_session "AC8: after Ctrl-C stops plain SQL, run after code kept a result set, sqlite3 still runs SQL" \
+	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); 0');
+WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c WHERE x < 2000000000) SELECT count(*) FROM c;"
 
 # --- AC9: the memory limit ------------------------------------------------------
 
@@ -718,6 +723,12 @@ expect "AC14: a statement runs only when stepped, and the end of the rows is fal
 	"$EXEC_SETUP" "SELECT js_eval('db.exec(\"INSERT INTO ac14 VALUES (3)\"); 0');" \
 	"SELECT js_eval('[db.exec(\"SELECT 1 WHERE 0\").next(), db.exec(\"INSERT INTO ac14 VALUES (2)\").next()].join(\" \")');" \
 	"SELECT group_concat(a) FROM (SELECT a FROM ac14 ORDER BY a);"
+# A result set ends when the call into JavaScript that created it returns, so
+# one kept in a global throws when a later call reads it.
+expect_error "AC14: a result set kept in a global throws when a later call reads it" \
+	"closed when the call into JavaScript that created it returned" \
+	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); 0');" \
+	"SELECT js_eval('held.next()');"
 
 echo "1..$n"
 if [[ $failed -ne 0 ]]; then

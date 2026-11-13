@@ -3,13 +3,12 @@ TERMUX_PKG_DESCRIPTION="SQLite extension for functions written in JavaScript"
 TERMUX_PKG_LICENSE="Apache-2.0, MIT"
 TERMUX_PKG_LICENSE_FILE="LICENSE, LICENSE.quickjs"
 TERMUX_PKG_MAINTAINER="@appdevforall"
-TERMUX_PKG_VERSION=1.4.1
+TERMUX_PKG_VERSION=1.4.2
 TERMUX_PKG_SRCURL=https://github.com/sqliteai/sqlite-js/archive/refs/tags/${TERMUX_PKG_VERSION}.tar.gz
-TERMUX_PKG_SHA256=d45d394fc7cb37070a64fa248994c7fef7c10cff31541eb57608405753fc3078
-# Upstream released our earlier changes (sqliteai/sqlite-js #11 to #19) in
-# 1.4.0. The *.patch files are ours (ADFA-7081) and offered upstream as #22 and
-# #23; check each one against a new upstream version, and drop those upstream
-# has merged.
+TERMUX_PKG_SHA256=1aa4c566491f1b56f3fd676b80880fdccbf0806b8f3cd015f60cd0f1c171cf24
+# Upstream released our changes (sqliteai/sqlite-js #11 to #19) in 1.4.0, and
+# #22 to #24 in 1.4.2, so this build carries no patches. Patches of ours would
+# go here as *.patch files, each offered upstream first.
 TERMUX_PKG_BUILD_DEPENDS="libsqlite"
 TERMUX_PKG_RECOMMENDS="sqlite"
 TERMUX_PKG_BUILD_IN_SRC=true
