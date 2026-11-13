@@ -173,8 +173,13 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
   limit under it leaves no room for any JavaScript until it is raised again.
 - **Endless code.** Ctrl-C stops running JavaScript: the statement fails with
   an "interrupted" error, even if the code catches exceptions, and `sqlite3`
-  keeps running. A `db.exec` result set that the stopped code kept, in a
-  global say, is ended: reading on from it fails with "interrupted".
+  keeps running. Every `db.exec` result set still open in the session is
+  ended, including ones that earlier statements kept, and reading on from
+  one fails with "interrupted". Ctrl-C while no JavaScript runs, during
+  plain SQL, leaves the session failing every statement for as long as
+  JavaScript keeps a result set open, until `sqlite3` is restarted; so
+  finish each result set (`toArray()`, or `next()` until it returns
+  `false`) before your code returns.
 - **Stack.** 1 MB by default, or less on a thread with less stack;
   `js_set_max_stack_size` changes it. Code that calls itself too deeply fails
   with "Maximum call stack size exceeded".
@@ -217,7 +222,7 @@ This build adds four patches of ours, offered upstream:
 |-------|-------------|--------|
 | 0001 | #22 | The stack check stays within the stack in two more cases. In 1.4.1, endless recursion crashes on a thread with less than 64 KB of stack left, or on a main thread whose stack was first measured deep down. Neither happens in `sqlite3`, which runs JavaScript on its main thread and loads the extension near the top of its stack. |
 | 0002 | #23 | Garbage is collected after any "out of memory" error and whenever the limit is set. In 1.4.1, garbage can make code that fits in the limit fail with "out of memory" every time: an allocation too large to fit, or one made after the limit was lowered to above the memory in use. |
-| 0003, 0004 | #24 | After an interrupt, the `db.exec` result sets the stopped code left open are ended, and reading on from one fails with "interrupted". In 1.4.1, Ctrl-C during code that keeps one open, in a global say, leaves every later statement in the session failing with "interrupted". |
+| 0003, 0004 | #24 | After an interrupt, the `db.exec` result sets still open in the session are ended, and reading on from one fails with "interrupted". In 1.4.1, Ctrl-C during code that keeps one open, in a global say, leaves every later statement in the session failing with "interrupted". |
 
 The build also exports only the extension's entry points, and adds the one
 SQLite derives from the file name, so that `.load sqlite-js` needs no entry
