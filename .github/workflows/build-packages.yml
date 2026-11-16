@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       packages:
-        description: Space-separated termux-packages names to build
+        description: Space-separated names of packages to build, from termux-packages or our packages/
         required: true
       arch:
         description: Target architecture (both builds aarch64 and arm in parallel)

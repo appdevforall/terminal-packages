@@ -95,4 +95,8 @@ COTG_PACKAGES+=(
     # useful for Android SDK
     "cmake"
     "libllvm"
+
+    # Brotli functions for the sqlite3 shell, used to maintain
+    # documentation.db (ADFA-6635). Built from packages/sqlite-brotli.
+    "sqlite-brotli"
 )

@@ -141,14 +141,20 @@ sed_escape() {
   printf '%s\n' "$1" | sed -e 's/[.[\*^$/]/\\&/g' -e 's/\\/\\\\/g' -e 's/#/\\#/g'
 }
 
+# Replaces the Termux package name with ours in the text files under $1.
+# Binary files are left alone, and file names may contain any character.
+update_package_name() {
+  # grep exits 1 when no file matches, which is not a failure here.
+  { grep -rlIZF --exclude-dir=".git" -e "${TERMUX_PACKAGE_NAME}" -- "$1" || [[ $? -eq 1 ]]; } |
+    xargs -0 -r sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${COTG_PACKAGE_NAME}/g"
+}
+
 setup_termux_packages() {
   pushd "$TERMUX_PACKAGES_DIR" || scribe_error_exit "Unable to pushd into termux-packages"
 
   # Change package name
   echo "Updating package name.."
-  grep -rniF . -e "${TERMUX_PACKAGE_NAME}" -l --exclude-dir=".git" |
-    xargs -L1 sed -i "s/${TERMUX_PACKAGE_NAME//./\\.}/${COTG_PACKAGE_NAME}/g" ||
-    scribe_error_exit "Unable to update package name"
+  update_package_name . || scribe_error_exit "Unable to update package name"
 
   # Removes existing keyrings
   echo "Removing existing GPG keys..."
@@ -183,6 +189,102 @@ setup_termux_packages() {
   touch .scribe-patched
 
   popd || scribe_error_exit "Unable to popd from termux-packages"
+}
+
+# Marks our copies in termux-packages, so the cleanup removes only folders it
+# made. Whether a package is upstream's is for git to say: a marker can
+# outlast a checkout of a newer termux-packages that adds a package of the
+# same name.
+COTG_OWN_PACKAGE_MARKER=".cotg-own-package"
+
+# Runs git in termux-packages. It drops git variables inherited from a caller,
+# such as GIT_DIR or GIT_INDEX_FILE in a git hook, which would make git answer
+# for another repository or index.
+termux_packages_git() {
+  (
+    local -a git_vars
+    mapfile -t git_vars < <(git rev-parse --local-env-vars)
+    unset "${git_vars[@]}"
+    git -C "$TERMUX_PACKAGES_DIR" "$@"
+  )
+}
+
+# Stops the build unless termux-packages is a git checkout of its own, so that
+# git answers for it and not for a repository around it.
+check_termux_packages_checkout() {
+  local toplevel
+  toplevel="$(termux_packages_git rev-parse --show-toplevel)" ||
+    scribe_error_exit "Unable to read termux-packages with git; see git's message above"
+  [[ "$(realpath "$toplevel")" == "$(realpath "$TERMUX_PACKAGES_DIR")" ]] ||
+    scribe_error_exit "termux-packages is not a git checkout of its own (git found '$toplevel'); run 'git submodule update --init'"
+}
+
+# Succeeds if git tracks a file under $1, a path inside termux-packages.
+# Stops the build if git cannot answer.
+termux_packages_tracks() {
+  local files
+  files="$(termux_packages_git --literal-pathspecs ls-files -- "$1")" ||
+    scribe_error_exit "Unable to ask git whether termux-packages has '$1'"
+  [[ -n "$files" ]]
+}
+
+# Copies our own packages (packages/<name>/) into termux-packages/packages/.
+# Runs on every build, unlike the patches, so the copies always match
+# packages/. A build in the same container still skips a package it already
+# built at the same version, and publishing keeps a published file of the
+# same version, so a change must raise TERMUX_PKG_VERSION or
+# TERMUX_PKG_REVISION to reach users.
+# They must be new packages: a change to an upstream package is a patch in
+# PATCHES.
+sync_own_packages() {
+  local pkg_dir pkg_name dest repo_dir
+  local -a repo_dirs
+
+  # The package directories build-package.sh searches.
+  mapfile -t repo_dirs < <(jq --raw-output 'del(.pkg_format) | keys | .[]' "$TERMUX_PACKAGES_DIR/repo.json")
+  [[ ${#repo_dirs[@]} -gt 0 ]] || scribe_error_exit "Unable to read package directories from termux-packages/repo.json"
+
+  check_termux_packages_checkout
+
+  # Drop copies of packages that are no longer ours, so they are not built.
+  for dest in "$TERMUX_PACKAGES_DIR"/packages/*/; do
+    pkg_name="$(basename "$dest")"
+    if [[ -e "$dest/$COTG_OWN_PACKAGE_MARKER" && ! -d "$script_dir/packages/$pkg_name" ]]; then
+      if termux_packages_tracks "packages/$pkg_name"; then
+        scribe_error_exit "termux-packages/packages/$pkg_name is upstream's but has our $COTG_OWN_PACKAGE_MARKER from an older build; reset termux-packages with 'git -C termux-packages reset --hard && git -C termux-packages clean -fdx' and run again"
+      fi
+      rm -rf "$dest"
+      scribe_ok "Removed package '$pkg_name', which is no longer in packages/"
+    fi
+  done
+
+  for pkg_dir in "$script_dir"/packages/*/; do
+    [[ -d "$pkg_dir" ]] || continue
+    pkg_name="$(basename "$pkg_dir")"
+    dest="$TERMUX_PACKAGES_DIR/packages/$pkg_name"
+
+    for repo_dir in "${repo_dirs[@]}"; do
+      if termux_packages_tracks "$repo_dir/$pkg_name" ||
+        compgen -G "$TERMUX_PACKAGES_DIR/$repo_dir/*/$pkg_name.subpackage.sh" >/dev/null; then
+        scribe_error_exit "termux-packages already has a package named '$pkg_name' in $repo_dir/; change it with a patch instead"
+      fi
+      # Not upstream's, so a folder of that name is our copy or someone's own work.
+      if [[ -e "$TERMUX_PACKAGES_DIR/$repo_dir/$pkg_name" && ! -e "$TERMUX_PACKAGES_DIR/$repo_dir/$pkg_name/$COTG_OWN_PACKAGE_MARKER" ]]; then
+        scribe_error_exit "termux-packages/$repo_dir/$pkg_name is not upstream's and not our copy; move it out of termux-packages"
+      fi
+    done
+
+    # The marker goes in before the files, so a copy cut short is still known
+    # as ours and is replaced on the next run.
+    rm -rf "$dest"
+    { mkdir "$dest" && touch "$dest/$COTG_OWN_PACKAGE_MARKER" && cp -r "$pkg_dir." "$dest/"; } ||
+      scribe_error_exit "Unable to copy package '$pkg_name'"
+
+    # The same package name update setup_termux_packages makes upstream.
+    update_package_name "$dest" || scribe_error_exit "Unable to update package name in '$pkg_name'"
+
+    scribe_ok "Copied package '$pkg_name'"
+  done
 }
 
 if [[ $# -eq 0 ]]; then
@@ -240,10 +342,13 @@ scribe_check_command "git"
 scribe_check_command "patch"
 scribe_check_command "tee"
 scribe_check_command "time"
+scribe_check_command "jq"
 
 if ! [[ -f "$TERMUX_PACKAGES_DIR/.scribe-patched" ]]; then
   setup_termux_packages
 fi
+
+sync_own_packages
 
 # Symlink termux-packages/output to OUTPUT_DIR
 if ! [[ -L "$TERMUX_PACKAGES_DIR/output" ]]; then
