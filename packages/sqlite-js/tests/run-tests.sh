@@ -195,8 +195,9 @@ expect_nobail() {
 # interrupted within 5 seconds. The statement must be one that creates the file
 # "started" as it begins, with WHERE $STARTED: SQLite drops an interrupt that
 # arrives while no statement runs, so the signal must not come before it, or
-# between two statements. sqlite3 is started directly, not through sql(), so
-# that $! is its process.
+# between two statements. A statement that has not started within 10 s fails
+# the test as such, so the failure does not blame Ctrl-C. sqlite3 is started
+# directly, not through sql(), so that $! is its process.
 STARTED="writefile('started', '') IS NOT NULL"
 expect_sigint_stops() {
 	local name=$1 pid i rc got
@@ -206,8 +207,15 @@ expect_sigint_stops() {
 	pid=$!
 	for ((i = 0; i < 100; i++)); do
 		[[ -e started ]] && break
+		kill -0 "$pid" 2>/dev/null || break
 		sleep 0.1
 	done
+	if [[ ! -e started ]]; then
+		kill -KILL "$pid" 2>/dev/null
+		wait "$pid" 2>/dev/null
+		not_ok "$name" "the statement did not start within 10 s, so no SIGINT was sent" "got: $(<sigint.out)"
+		return
+	fi
 	kill -INT "$pid" 2>/dev/null
 	for ((i = 0; i < 50; i++)); do
 		kill -0 "$pid" 2>/dev/null || break
@@ -453,7 +461,8 @@ DB=$WORK/test.db
 
 # Each runaway loop gives up after 20 s, long after the tests expect Ctrl-C to
 # have stopped it, so that a build where Ctrl-C does nothing leaves no sqlite3
-# behind: timeout(1) below can stop script(1), but not the sqlite3 it runs.
+# behind: timeout(1) below can stop script(1), but not the sqlite3 it runs. The
+# plain-SQL runaway counts to 50,000,000 instead, about 5 s on an x86_64 host.
 RUNAWAY='for (const end = Date.now() + 20000; Date.now() < end;) {}'
 expect_sigint_stops "AC8: SIGINT (Ctrl-C) stops a runaway loop in js_eval" \
 	"SELECT js_eval('$RUNAWAY') WHERE $STARTED;"
@@ -477,7 +486,7 @@ expect_ctrl_c_keeps_session() {
 	cmd=$(printf '%q ' "$SQLITE3" -noheader -cmd "$LOAD_EXT" "$DB")
 	# The shell also reports "interrupted" once the loop ends by itself, so the
 	# session must end well before the loop's 20 s are up: about 5 s if Ctrl-C works.
-	rm -f started
+	rm -f started not-started
 	started=$SECONDS
 	got=$({
 		sleep 1
@@ -486,6 +495,7 @@ expect_ctrl_c_keeps_session() {
 			[[ -e started ]] && break
 			sleep 0.1
 		done
+		[[ -e started ]] || : >not-started
 		printf '\003'
 		sleep 1
 		printf '%s\n' "SELECT 'still' || ' alive';"
@@ -493,7 +503,9 @@ expect_ctrl_c_keeps_session() {
 		printf '.quit\n'
 	} | timeout -k 5 30 script -q -c "$cmd" /dev/null 2>&1 | tr -d '\r')
 	seconds=$((SECONDS - started))
-	if [[ $got == *interrupted* && $got == *"still alive"* && $seconds -lt 15 ]]; then
+	if [[ -e not-started ]]; then
+		not_ok "$name" "the statement did not start within 10 s of being typed, so Ctrl-C came before it" "got: $got"
+	elif [[ $got == *interrupted* && $got == *"still alive"* && $seconds -lt 15 ]]; then
 		ok "$name"
 	else
 		not_ok "$name" "took $seconds s, want under 15" "got: $got"
@@ -510,7 +522,7 @@ expect_ctrl_c_keeps_session "AC8: after Ctrl-C stops code that keeps a result se
 	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); $RUNAWAY') WHERE $STARTED;"
 expect_ctrl_c_keeps_session "AC8: after Ctrl-C stops plain SQL, run after code kept a result set, sqlite3 still runs SQL" \
 	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); 0');
-WITH RECURSIVE c(x) AS (SELECT 1 + writefile('started', '') UNION ALL SELECT x + 1 FROM c WHERE x < 200000000) SELECT count(*) FROM c;"
+WITH RECURSIVE c(x) AS (SELECT 1 + writefile('started', '') UNION ALL SELECT x + 1 FROM c WHERE x < 50000000) SELECT count(*) FROM c;"
 
 # --- AC9: the memory limit ------------------------------------------------------
 
