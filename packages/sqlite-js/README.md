@@ -3,8 +3,9 @@
 A SQLite loadable extension for writing SQL functions in JavaScript: scalar
 functions, aggregates, window functions and collations (ADFA-7081). It is
 [sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.4.2, which
-includes twelve changes of ours, listed [below](#changes-in-this-build). The JavaScript engine,
-[quickjs-ng](https://github.com/quickjs-ng/quickjs) 0.12.1, is built in.
+includes twelve changes of ours, listed [below](#changes-in-this-build). The
+JavaScript engine, [quickjs-ng](https://github.com/quickjs-ng/quickjs) 0.12.1,
+is built in.
 
 ## Load it
 
@@ -91,9 +92,12 @@ SELECT js_eval('(function () {
 `toArray()` steps it, so call `next()` once to run an `INSERT` or another
 statement that returns no rows. An SQL error, while the statement is prepared
 or while it runs, is a JavaScript exception. A result set lasts until the call
-into JavaScript that created it returns: one kept in a global and read by a
-later call throws "The result set was closed when the call into JavaScript that
-created it returned".
+into JavaScript that created it returns, or until the outer call returns when
+SQL that the outer call ran with `db.exec` made that call. One kept in a global
+and read by a later call throws "The result set was closed when the call into
+JavaScript that created it returned", or "interrupted" if Ctrl-C stopped the
+call; one whose `next()` returned `false`, or whose `toArray()` ran, just
+reports no more rows.
 
 ## Functions
 
@@ -218,9 +222,9 @@ Upstream released three more in 1.4.2, compared with 1.4.1:
 
 | Upstream PR | Change |
 |-------------|--------|
-| #22 | The stack check stays within the stack in two more cases, and upstream added a third: the main thread's stack is measured from the top the kernel counts from. In 1.4.1, endless recursion crashes on a thread with less than 64 KB of stack left, or on a main thread whose stack was first measured deep down. Neither happens in `sqlite3`, which runs JavaScript on its main thread and loads the extension near the top of its stack. |
+| #22 | The stack check stays within the stack in two more cases, and upstream added two more: the main thread's stack is measured from the top the kernel counts from, and with no stack limit (`ulimit -s unlimited`) at most 1 MB is allowed. In 1.4.1, endless recursion crashes on a thread with less than 64 KB of stack left, or on a main thread whose stack was first measured deep down. Neither happens in `sqlite3`, which runs JavaScript on its main thread and loads the extension near the top of its stack. |
 | #23 | Garbage is collected after any "out of memory" error and whenever the limit is set. In 1.4.1, garbage can make code that fits in the limit fail with "out of memory" every time: an allocation too large to fit, or one made after the limit was lowered to above the memory in use. |
-| #24 | After an interrupt, the `db.exec` result sets still open in the session are ended. In 1.4.1, Ctrl-C during code that keeps one open, in a global say, leaves every later statement in the session failing with "interrupted". |
+| #24 | After an interrupt, the `db.exec` result sets still open in the session are ended, and reading on from one fails with "interrupted". In 1.4.1, Ctrl-C during code that keeps one open, in a global say, leaves every later statement in the session failing with "interrupted". |
 
 Upstream's own fix for a crash we reported (#25), also in 1.4.2, ends every
 `db.exec` result set when the call into JavaScript that created it returns. In
@@ -241,11 +245,11 @@ point argument.
 $ bash $PREFIX/share/sqlite-js/run-tests.sh
 ```
 
-They print TAP and exit 0 only if every test passes. Two tests need other
-packages and are skipped without them: `sqlite-brotli`, to check that both
-extensions load together, and `util-linux`, whose `script` drives an
-interactive `sqlite3` to check that Ctrl-C leaves it running. The last line
-says how many were skipped.
+They print TAP and exit 0 only if every test passes. Four tests need other
+packages and are skipped without them: one needs `sqlite-brotli`, to check that
+both extensions load together, and three need `util-linux`, whose `script`
+drives an interactive `sqlite3` to check that Ctrl-C leaves it running. The
+last line says how many were skipped.
 
 ## License
 

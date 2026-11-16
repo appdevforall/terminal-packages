@@ -699,6 +699,18 @@ else
 	not_ok "AC13: the error names the largest size" "got: $most"
 fi
 
+# With no stack limit there is no size to measure, so at most 1 MB is allowed
+# (1.4.2). Skipped where the limit cannot be raised.
+if got=$(ulimit -s unlimited 2>/dev/null && sql "SELECT js_set_max_stack_size(2097152);" 2>&1); then
+	not_ok "AC13: with no stack limit, sizes above 1 MB are refused" "got: $got"
+elif [[ $got =~ "from 1 to 1048576," ]]; then
+	ok "AC13: with no stack limit, sizes above 1 MB are refused"
+elif ! (ulimit -s unlimited 2>/dev/null); then
+	skip "AC13: with no stack limit, sizes above 1 MB are refused" "ulimit -s unlimited is not allowed here"
+else
+	not_ok "AC13: with no stack limit, sizes above 1 MB are refused" "want: from 1 to 1048576" "got: $got"
+fi
+
 # On a thread with less stack than the 1 MB default, the default shrinks.
 got=$(ulimit -s 512 && sql "$RECURSE" 2>&1)
 rc=$?
