@@ -190,15 +190,24 @@ expect_nobail() {
 	fi
 }
 
-# Starts the SQL in the background, sends SIGINT, as Ctrl-C does, after a
-# second, and expects the statement to fail as interrupted within 5 seconds.
-# sqlite3 is started directly, not through sql(), so that $! is its process.
+# Starts the SQL in the background, sends SIGINT, as Ctrl-C does, once the
+# runaway statement has started, and expects the statement to fail as
+# interrupted within 5 seconds. The statement must be one that creates the file
+# "started" as it begins, with WHERE $STARTED: SQLite drops an interrupt that
+# arrives while no statement runs, so the signal must not come before it, or
+# between two statements. sqlite3 is started directly, not through sql(), so
+# that $! is its process.
+STARTED="writefile('started', '') IS NOT NULL"
 expect_sigint_stops() {
 	local name=$1 pid i rc got
 	shift
+	rm -f started
 	"$SQLITE3" -bail -batch -noheader -cmd "$LOAD_EXT" "$DB" "$@" >sigint.out 2>&1 &
 	pid=$!
-	sleep 1
+	for ((i = 0; i < 100; i++)); do
+		[[ -e started ]] && break
+		sleep 0.1
+	done
 	kill -INT "$pid" 2>/dev/null
 	for ((i = 0; i < 50; i++)); do
 		kill -0 "$pid" 2>/dev/null || break
@@ -331,8 +340,11 @@ expect_error "AC4: a function cannot be redefined in the session that created it
 	"Function updates must be performed using a separate database connection" \
 	"SELECT js_init_table(1);" \
 	"SELECT js_create_scalar('twice', '(function (args) { return args[0] * 3; })');"
-expect "AC4: a new session can redefine it, and stores the new code" $'0\n63' \
+expect "AC4: a new session can redefine it" $'0\n63' \
 	"SELECT js_create_scalar('twice', '(function (args) { return args[0] * 3; })');" \
+	"SELECT twice(21);"
+expect "AC4: and stores the new code, which the next new session loads" $'0\n63' \
+	"SELECT js_init_table(1);" \
 	"SELECT twice(21);"
 DB=$WORK/test.db
 
@@ -444,19 +456,20 @@ DB=$WORK/test.db
 # behind: timeout(1) below can stop script(1), but not the sqlite3 it runs.
 RUNAWAY='for (const end = Date.now() + 20000; Date.now() < end;) {}'
 expect_sigint_stops "AC8: SIGINT (Ctrl-C) stops a runaway loop in js_eval" \
-	"SELECT js_eval('$RUNAWAY');"
+	"SELECT js_eval('$RUNAWAY') WHERE $STARTED;"
 expect_sigint_stops "AC8: SIGINT stops a runaway scalar function" \
-	"SELECT js_create_scalar('forever', '(function (args) { $RUNAWAY })');" "SELECT forever(1);"
+	"SELECT js_create_scalar('forever', '(function (args) { $RUNAWAY })');" "SELECT forever(1) WHERE $STARTED;"
 expect_sigint_stops "AC8: SIGINT stops code that catches every exception" \
-	"SELECT js_eval('for (const end = Date.now() + 20000; Date.now() < end;) { try { while (Date.now() < end) {} } catch (e) {} }');"
+	"SELECT js_eval('for (const end = Date.now() + 20000; Date.now() < end;) { try { while (Date.now() < end) {} } catch (e) {} }') WHERE $STARTED;"
 
 # In batch mode the shell exits after an interrupt, whatever stopped; only an
 # interactive session goes on. script(1) runs one on a pseudo-terminal, where
 # the byte 0x03 is Ctrl-C.
-# expect_ctrl_c_keeps_session NAME SQL: Ctrl-C a second after SQL starts must
-# stop it, and the session must then run SQL.
+# expect_ctrl_c_keeps_session NAME SQL: Ctrl-C once SQL has started, which it
+# signals by creating the file "started" (see expect_sigint_stops), must stop
+# it, and the session must then run SQL.
 expect_ctrl_c_keeps_session() {
-	local name=$1 sql=$2 cmd got started seconds
+	local name=$1 sql=$2 cmd got started seconds i
 	if ! command -v script >/dev/null 2>&1; then
 		skip "$name" "needs script(1), from the util-linux package"
 		return
@@ -464,11 +477,15 @@ expect_ctrl_c_keeps_session() {
 	cmd=$(printf '%q ' "$SQLITE3" -noheader -cmd "$LOAD_EXT" "$DB")
 	# The shell also reports "interrupted" once the loop ends by itself, so the
 	# session must end well before the loop's 20 s are up: about 5 s if Ctrl-C works.
+	rm -f started
 	started=$SECONDS
 	got=$({
 		sleep 1
 		printf '%s\n' "$sql"
-		sleep 2
+		for ((i = 0; i < 100; i++)); do
+			[[ -e started ]] && break
+			sleep 0.1
+		done
 		printf '\003'
 		sleep 1
 		printf '%s\n' "SELECT 'still' || ' alive';"
@@ -483,17 +500,17 @@ expect_ctrl_c_keeps_session() {
 	fi
 }
 expect_ctrl_c_keeps_session "AC8: in an interactive session, Ctrl-C stops a runaway loop and sqlite3 keeps running" \
-	"SELECT js_eval('$RUNAWAY');"
+	"SELECT js_eval('$RUNAWAY') WHERE $STARTED;"
 # A db.exec result set left open is a statement still running, and SQLite keeps
 # an interrupt in effect while one runs. In 1.4.1 a result set kept in a global
 # stayed open, so after Ctrl-C, during the code or during plain SQL later, every
 # statement in the session failed with "interrupted". From 1.4.2 the result set
 # ends when the call that created it returns.
 expect_ctrl_c_keeps_session "AC8: after Ctrl-C stops code that keeps a result set open, sqlite3 still runs SQL" \
-	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); $RUNAWAY');"
+	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); $RUNAWAY') WHERE $STARTED;"
 expect_ctrl_c_keeps_session "AC8: after Ctrl-C stops plain SQL, run after code kept a result set, sqlite3 still runs SQL" \
 	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); 0');
-WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c WHERE x < 2000000000) SELECT count(*) FROM c;"
+WITH RECURSIVE c(x) AS (SELECT 1 + writefile('started', '') UNION ALL SELECT x + 1 FROM c WHERE x < 200000000) SELECT count(*) FROM c;"
 
 # --- AC9: the memory limit ------------------------------------------------------
 
@@ -628,8 +645,9 @@ expect "AC10: every js_* function but js_version is SQLITE_DIRECTONLY" "13|0" \
 # TEMP view can call js_eval, as the README says.
 expect "AC10: a TEMP view can call js_eval" "42" \
 	"CREATE TEMP VIEW v_temp AS SELECT js_eval('6 * 7') AS x;" "SELECT x FROM v_temp;"
-# The view is in the database file: SQLite trusts the TEMP schema, which only
-# the session itself can fill.
+# This view is in the database file, which anyone can fill. It uses twice(), a
+# function js_create_scalar defines for the session, and SQLite only lets a view
+# use such a function when trusted_schema is ON; sqlite3 turns it off.
 DB=$WORK/views.db
 "$SQLITE3" -bail -batch "$DB" "CREATE VIEW v_twice AS SELECT twice(21) AS x;" ||
 	not_ok "AC10: create a view that uses a function made with js_create_scalar"

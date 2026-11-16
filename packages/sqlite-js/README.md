@@ -178,8 +178,9 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
   globals still hold counts against the limit until they are cleared, so a
   limit under it leaves no room for any JavaScript until it is raised again.
 - **Endless code.** Ctrl-C stops running JavaScript: the statement fails with
-  an "interrupted" error, even if the code catches exceptions, and `sqlite3`
-  keeps running.
+  an "interrupted" error, even if the code catches exceptions. In an
+  interactive session `sqlite3` keeps running; with SQL from a file or from
+  arguments it exits.
 - **Stack.** 1 MB by default, or less on a thread with less stack;
   `js_set_max_stack_size` changes it, up to what the stack allows. With no
   stack limit (`ulimit -s unlimited`) that is 1 MB, since there is no size to
