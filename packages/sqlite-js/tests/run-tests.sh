@@ -251,7 +251,7 @@ expect "loading the extension twice in one session is harmless" "2" \
 
 # --- AC2: the engine is quickjs-ng --------------------------------------------
 
-expect "AC2: js_version() is the sqlite-js version, 1.4.2" "1.4.2" "SELECT js_version();"
+expect "AC2: js_version() is the sqlite-js version, 1.4.3" "1.4.3" "SELECT js_version();"
 got=$(sql "SELECT js_version(1);" 2>&1)
 # Bellard's QuickJS has no version function, so sqlite-js does not build with it.
 if [[ $got =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -771,6 +771,25 @@ expect_error "AC14: a result set kept in a global throws when a later call reads
 	"closed when the call into JavaScript that created it returned" \
 	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); 0');" \
 	"SELECT js_eval('held.next()');"
+
+# --- ADFA-7200: errors that 1.4.3 drops (upstream #36, patch 0001) -------------
+
+# A setter on Array.prototype makes putting an element into a new array throw.
+# The call must fail with that error, not run with fewer arguments or rows.
+SETTER="SELECT js_eval('Object.defineProperty(Array.prototype, \"0\", { set(v) { throw new Error(\"index setter\"); }, configurable: true }); 1');"
+expect_error "ADFA-7200: an error building a call's arguments fails the call" "index setter" \
+	"SELECT js_create_scalar('first_arg', '(function (args) { return (args[0] === undefined) ? \"missing\" : args[0]; })');" \
+	"$SETTER" "SELECT first_arg(5);"
+expect_error "ADFA-7200: an error building a toArray() row fails the call" "index setter" \
+	"$SETTER" "SELECT js_eval('db.exec(\"SELECT 1, 2\").toArray().length');"
+
+# On a read-only connection a new function is registered but cannot be stored
+# in js_functions, so it would be gone in the next session: that is an error.
+sql "SELECT js_init_table();" >/dev/null 2>&1
+expect_error "ADFA-7200: a function that cannot be stored in js_functions is an error" \
+	"could not be stored in js_functions" \
+	".open --readonly $(dot_arg "$DB")" "$LOAD_EXT" \
+	"SELECT js_create_scalar('not_stored', '(function (args) { return 42; })');"
 
 echo "1..$n"
 if [[ $failed -ne 0 ]]; then
