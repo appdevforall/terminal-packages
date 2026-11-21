@@ -2,8 +2,8 @@
 
 A SQLite loadable extension for writing SQL functions in JavaScript: scalar
 functions, aggregates, window functions and collations (ADFA-7081). It is
-[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.4.2, which
-includes twelve changes of ours, listed [below](#changes-in-this-build). The
+[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.4.4, which
+includes fourteen changes of ours, listed [below](#changes-in-this-build). The
 JavaScript engine, [quickjs-ng](https://github.com/quickjs-ng/quickjs) 0.12.1,
 is built in.
 
@@ -177,6 +177,11 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
   `js_set_memory_limit` changes the limit, and collects garbage. Memory that
   globals still hold counts against the limit until they are cleared, so a
   limit under it leaves no room for any JavaScript until it is raised again.
+  The limit counts the memory the allocator actually hands out. Where that is
+  jemalloc, which rounds large blocks up to a size class (measured on a 32-bit
+  Android 9 phone), a big `ArrayBuffer` can count up to a quarter more than its
+  length: 32 MB and 4 KB counts as 40 MB, and 60 MB as 64 MB, the whole
+  default limit.
 - **Endless code.** Ctrl-C stops running JavaScript: the statement fails with
   an "interrupted" error, even if the code catches exceptions. In an
   interactive session `sqlite3` keeps running; with SQL from a file or from
@@ -233,6 +238,16 @@ Upstream's own fix for a crash we reported (#25), also in 1.4.2, ends every
 function could crash `sqlite3`, and a result set kept in a global kept a
 statement open: Ctrl-C during plain SQL then left every later statement
 failing with "interrupted".
+
+Upstream released one more in 1.4.3: #33 lets an app that embeds sqlite-js
+cancel all running JavaScript with `sqlitejs_cancel_all()`. `sqlite3` does not
+use it, and this build does not export it.
+
+And one more in 1.4.4 (ADFA-7200):
+
+| Upstream PR | Change |
+|-------------|--------|
+| #36 | Errors that 1.4.3 drops are reported. An error while building a call's arguments, or a row of `toArray()`, fails the call; in 1.4.3 the function runs with fewer arguments, or gets a short row. Text that SQLite runs out of memory converting gives an "out of memory" error; in 1.4.3, `sqlite3` crashes. `js_create_scalar` and its siblings fail when they cannot store the function in `js_functions`, for example on a read-only database; in 1.4.3 they report success, and the function is gone in the next session. |
 
 This build carries no patches.
 

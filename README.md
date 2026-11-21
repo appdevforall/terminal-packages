@@ -28,7 +28,7 @@ Packages that are not in `termux-packages` live in `packages/<name>/`, laid out 
 | Package | What it is |
 |---------|------------|
 | `sqlite-brotli` | SQLite extension adding `encodeBrotli()` and `decodeBrotli()`. See [its README](packages/sqlite-brotli/README.md). |
-| `sqlite-js` | SQLite extension for SQL functions written in JavaScript: [sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.4.2, which includes our changes. See [its README](packages/sqlite-js/README.md). |
+| `sqlite-js` | SQLite extension for SQL functions written in JavaScript: [sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.4.4, which includes our changes. See [its README](packages/sqlite-js/README.md). |
 
 The key specified with the `-s` option is the **public key** (**NOT** the private key!), which can be generated using :
 

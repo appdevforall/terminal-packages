@@ -251,7 +251,7 @@ expect "loading the extension twice in one session is harmless" "2" \
 
 # --- AC2: the engine is quickjs-ng --------------------------------------------
 
-expect "AC2: js_version() is the sqlite-js version, 1.4.2" "1.4.2" "SELECT js_version();"
+expect "AC2: js_version() is the sqlite-js version, 1.4.4" "1.4.4" "SELECT js_version();"
 got=$(sql "SELECT js_version(1);" 2>&1)
 # Bellard's QuickJS has no version function, so sqlite-js does not build with it.
 if [[ $got =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -538,9 +538,13 @@ expect_nobail "AC9: code that keeps allocating fails at the limit, and the sessi
 	"1,2,3" "out of memory" \
 	"SELECT js_eval('(function () { const a = []; for (let i = 0; i < 160; i++) a.push(new Array(100000).fill(1)); })()');" \
 	"SELECT js_eval('[1, 2, 3].join()');"
+# 48 MB, not 60: the limit counts a block's usable size, and jemalloc (measured
+# on a 32-bit Android 9 phone) rounds a 60 MB block up to 64 MB, the whole limit,
+# so nothing else could even be parsed until it was collected. 48 MB is an exact
+# jemalloc size class.
 expect_nobail "AC9: memory held by a global counts until the global is cleared" \
 	$'0\n16777216' "out of memory" \
-	"SELECT js_eval('globalThis.keep = new ArrayBuffer(60 * 1024 * 1024); 0');" \
+	"SELECT js_eval('globalThis.keep = new ArrayBuffer(48 * 1024 * 1024); 0');" \
 	"SELECT js_eval('new ArrayBuffer(16 * 1024 * 1024).byteLength');" \
 	"SELECT js_eval('keep = null; new ArrayBuffer(16 * 1024 * 1024).byteLength');"
 
@@ -771,6 +775,25 @@ expect_error "AC14: a result set kept in a global throws when a later call reads
 	"closed when the call into JavaScript that created it returned" \
 	"SELECT js_eval('globalThis.held = db.exec(\"SELECT 1 UNION ALL SELECT 2\"); held.next(); 0');" \
 	"SELECT js_eval('held.next()');"
+
+# --- ADFA-7200: errors that 1.4.3 drops (upstream #36, in 1.4.4) --------------
+
+# A setter on Array.prototype makes putting an element into a new array throw.
+# The call must fail with that error, not run with fewer arguments or rows.
+SETTER="SELECT js_eval('Object.defineProperty(Array.prototype, \"0\", { set(v) { throw new Error(\"index setter\"); }, configurable: true }); 1');"
+expect_error "ADFA-7200: an error building a call's arguments fails the call" "index setter" \
+	"SELECT js_create_scalar('first_arg', '(function (args) { return (args[0] === undefined) ? \"missing\" : args[0]; })');" \
+	"$SETTER" "SELECT first_arg(5);"
+expect_error "ADFA-7200: an error building a toArray() row fails the call" "index setter" \
+	"$SETTER" "SELECT js_eval('db.exec(\"SELECT 1, 2\").toArray().length');"
+
+# On a read-only connection a new function is registered but cannot be stored
+# in js_functions, so it would be gone in the next session: that is an error.
+sql "SELECT js_init_table();" >/dev/null 2>&1
+expect_error "ADFA-7200: a function that cannot be stored in js_functions is an error" \
+	"could not be stored in js_functions" \
+	".open --readonly $(dot_arg "$DB")" "$LOAD_EXT" \
+	"SELECT js_create_scalar('not_stored', '(function (args) { return 42; })');"
 
 echo "1..$n"
 if [[ $failed -ne 0 ]]; then
