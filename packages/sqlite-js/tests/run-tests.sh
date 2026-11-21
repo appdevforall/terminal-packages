@@ -538,9 +538,10 @@ expect_nobail "AC9: code that keeps allocating fails at the limit, and the sessi
 	"1,2,3" "out of memory" \
 	"SELECT js_eval('(function () { const a = []; for (let i = 0; i < 160; i++) a.push(new Array(100000).fill(1)); })()');" \
 	"SELECT js_eval('[1, 2, 3].join()');"
-# 48 MB, not 60: the limit counts a block's usable size, and jemalloc (Android
-# 10 and older) rounds a 60 MB block up to 64 MB, the whole limit, so nothing
-# else could even be parsed until it was collected. 48 MB is an exact size class.
+# 48 MB, not 60: the limit counts a block's usable size, and jemalloc (measured
+# on a 32-bit Android 9 phone) rounds a 60 MB block up to 64 MB, the whole limit,
+# so nothing else could even be parsed until it was collected. 48 MB is an exact
+# jemalloc size class.
 expect_nobail "AC9: memory held by a global counts until the global is cleared" \
 	$'0\n16777216' "out of memory" \
 	"SELECT js_eval('globalThis.keep = new ArrayBuffer(48 * 1024 * 1024); 0');" \

@@ -178,10 +178,11 @@ it as TEXT, `CAST(x AS TEXT)`, and convert it with `BigInt(args[0])`.
   `js_set_memory_limit` changes the limit, and collects garbage. Memory that
   globals still hold counts against the limit until they are cleared, so a
   limit under it leaves no room for any JavaScript until it is raised again.
-  The limit counts the memory the allocator actually hands out. On Android 10
-  and older, whose allocator (jemalloc) rounds large blocks up to a size
-  class, a big `ArrayBuffer` can count up to a quarter more than its length:
-  a 60 MB one counts as 64 MB, the whole default limit.
+  The limit counts the memory the allocator actually hands out. Where that is
+  jemalloc, which rounds large blocks up to a size class (measured on a 32-bit
+  Android 9 phone), a big `ArrayBuffer` can count up to a quarter more than its
+  length: 32 MB and 4 KB counts as 40 MB, and 60 MB as 64 MB, the whole
+  default limit.
 - **Endless code.** Ctrl-C stops running JavaScript: the statement fails with
   an "interrupted" error, even if the code catches exceptions. In an
   interactive session `sqlite3` keeps running; with SQL from a file or from
