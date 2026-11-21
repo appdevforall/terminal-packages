@@ -4,6 +4,7 @@ TERMUX_PKG_LICENSE="Apache-2.0, MIT"
 TERMUX_PKG_LICENSE_FILE="LICENSE, LICENSE.quickjs"
 TERMUX_PKG_MAINTAINER="@appdevforall"
 TERMUX_PKG_VERSION=1.4.3
+TERMUX_PKG_REVISION=1
 TERMUX_PKG_SRCURL=https://github.com/sqliteai/sqlite-js/archive/refs/tags/${TERMUX_PKG_VERSION}.tar.gz
 TERMUX_PKG_SHA256=a2ed16f353757767188134f74fc9f0b07feefa96abfa56bcc211758b4105ad0a
 # Upstream released our changes (sqliteai/sqlite-js #11 to #19) in 1.4.0, #22
