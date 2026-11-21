@@ -2,9 +2,8 @@
 
 A SQLite loadable extension for writing SQL functions in JavaScript: scalar
 functions, aggregates, window functions and collations (ADFA-7081). It is
-[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.4.3, which
-includes thirteen changes of ours, plus one patch of ours that upstream has not
-released yet, listed [below](#changes-in-this-build). The
+[sqliteai/sqlite-js](https://github.com/sqliteai/sqlite-js) 1.4.4, which
+includes fourteen changes of ours, listed [below](#changes-in-this-build). The
 JavaScript engine, [quickjs-ng](https://github.com/quickjs-ng/quickjs) 0.12.1,
 is built in.
 
@@ -244,12 +243,13 @@ Upstream released one more in 1.4.3: #33 lets an app that embeds sqlite-js
 cancel all running JavaScript with `sqlitejs_cancel_all()`. `sqlite3` does not
 use it, and this build does not export it.
 
-This build adds one patch, `0001-*.patch`, which is upstream #36, until a
-release has it (ADFA-7200):
+And one more in 1.4.4 (ADFA-7200):
 
 | Upstream PR | Change |
 |-------------|--------|
 | #36 | Errors that 1.4.3 drops are reported. An error while building a call's arguments, or a row of `toArray()`, fails the call; in 1.4.3 the function runs with fewer arguments, or gets a short row. Text that SQLite runs out of memory converting gives an "out of memory" error; in 1.4.3, `sqlite3` crashes. `js_create_scalar` and its siblings fail when they cannot store the function in `js_functions`, for example on a read-only database; in 1.4.3 they report success, and the function is gone in the next session. |
+
+This build carries no patches.
 
 The build also exports only the extension's entry points, and adds the one
 SQLite derives from the file name, so that `.load sqlite-js` needs no entry
